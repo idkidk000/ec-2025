@@ -1,0 +1,3 @@
+Jorathphor,Aeorjor,Felnmarn,Rahverax,Vaeloth,Zyrxel,Oronpyros,Lazilor,Eltmarn,Helix,Braeendris,Quenzeth,Marcarth,Sarnoth,Krondaros,Eadjorath,Sylsor,Zarpyr,Nexxaril,Lornarith
+
+L11,R10,L12,R9,L16,R8,L13,R15,L16,R18,L5,R18,L5,R16,L5,R5,L5,R8,L5,R8,L18,R14,L13,R5,L5,R19,L17,R9,L16

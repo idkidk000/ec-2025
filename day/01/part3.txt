@@ -1,0 +1,3 @@
+Sornoris,Wyraelor,Arakrex,Zyrdravor,Raelzorin,Shaelnoris,Ardencarth,Soriral,Selkaxis,Wyrloris,Helloris,Aeorsor,Nyssadir,Caelverax,Thalnar,Eldengalor,Kazeldrith,Heldren,Darzral,Nyrixox,Nyloris,Lornaris,Draithulth,Elaradar,Xarallith,Fyndris,Eldeneldrith,Nyrixardith,Sarnhal,Ulmargyth
+
+L42,R23,L33,R42,L46,R41,L30,R36,L10,R13,L47,R20,L31,R47,L17,R40,L13,R46,L28,R19,L5,R7,L5,R15,L5,R29,L5,R35,L5,R45,L5,R35,L5,R22,L5,R40,L5,R42,L5,R25,L26,R14,L34,R8,L45,R16,L19,R11,L14,R16,L15,R43,L45,R5,L20,R36,L13,R26,L48

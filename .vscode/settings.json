@@ -1,0 +1,18 @@
+{
+  "[plaintext]": {
+    "editor.codeActionsOnSave": [],
+    "editor.trimAutoWhitespace": false,
+    "editor.trimWhitespaceOnDelete": false,
+    "editor.unicodeHighlight.ambiguousCharacters": true,
+    "editor.unicodeHighlight.invisibleCharacters": true,
+    "files.trimFinalNewlines": false,
+    "files.trimTrailingWhitespace": false
+  },
+  "[typescript]": {
+    "editor.codeActionsOnSave": [],
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file"
+  },
+  "deno.enable": true
+}
