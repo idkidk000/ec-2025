@@ -1,6 +1,6 @@
 import { parseArgs } from '@/lib/args.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
-import { Utils } from '../../lib/utils.0.ts';
+import { Utils } from '@/lib/utils.0.ts';
 
 function part1(crates: number[], logger: Logger) {
   const set = new Set(crates);
@@ -20,7 +20,7 @@ function part2(crates: number[], logger: Logger) {
 
 function part3(crates: number[], logger: Logger) {
   const sets: Set<number>[] = [];
-  for (const crate of crates.toSorted((a, b) => b - a)) {
+  for (const crate of crates) {
     let found = false;
     for (const set of sets) {
       if (!set.has(crate)) {
