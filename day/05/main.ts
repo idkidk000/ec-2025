@@ -4,7 +4,7 @@ import { Utils } from '@/lib/utils.0.ts';
 
 interface Segment {
   left?: number;
-  spine: number;
+  center: number;
   right?: number;
 }
 interface Processed {
@@ -22,21 +22,20 @@ function process(data: string, logger: Logger): Processed {
   for (const number of numbers) {
     let found = false;
     for (const segment of segments) {
-      if (number < segment.spine && typeof segment.left === 'undefined') {
+      if (number < segment.center && typeof segment.left === 'undefined') {
         segment.left = number;
         found = true;
-      } else if (number > segment.spine && typeof segment.right === 'undefined') {
+      } else if (number > segment.center && typeof segment.right === 'undefined') {
         segment.right = number;
         found = true;
       }
       if (found) break;
     }
-    if (!found) segments.push({ spine: number });
+    if (!found) segments.push({ center: number });
     logger.debugMed({ number }, segments);
   }
-  logger.debugMed(segments.map((segment) => `\n${segment.left ?? ' '} - ${segment.spine} - ${segment.right ?? ' '}`).join(''));
-  const quality = parseInt(segments.map(({ spine }) => String(spine)).join(''));
-  // 2478587386
+  logger.debugMed(segments.map((segment) => `\n${segment.left ?? ' '} - ${segment.center} - ${segment.right ?? ' '}`).join(''));
+  const quality = parseInt(segments.map(({ center }) => String(center)).join(''));
   return { swordId, quality, segments };
 }
 
@@ -57,19 +56,18 @@ function part2(data: string, logger: Logger) {
 
 function part3(data: string, logger: Logger) {
   const swords = data.split('\n').map((line) => process(line, logger));
+  const getSegmentValue = (segment: Segment | undefined): number =>
+    typeof segment === 'undefined' ? 0 : parseInt(`${segment.left ?? ''}${segment.center ?? ''}${segment.right ?? ''}`);
   const sorted = swords.toSorted((a, b) => {
     if (a.quality !== b.quality) return b.quality - a.quality;
     for (let i = 0; i < Math.max(a.segments.length, b.segments.length); ++i) {
-      const aSegment = a.segments.at(i) ?? { spine: 0 };
-      const bSegment = b.segments.at(i) ?? { spine: 0 };
-      const aScore = parseInt(`${aSegment.left ?? ''}${aSegment.spine ?? ''}${aSegment.right ?? ''}`);
-      const bScore = parseInt(`${bSegment.left ?? ''}${bSegment.spine ?? ''}${bSegment.right ?? ''}`);
-      if (aScore !== bScore) return bScore - aScore;
+      const aValue = getSegmentValue(a.segments.at(i));
+      const bValue = getSegmentValue(b.segments.at(i));
+      if (aValue !== bValue) return bValue - aValue;
     }
     return b.swordId - a.swordId;
   });
   logger.debugLow(sorted.map(({ swordId }) => swordId));
-  // logger.debugLow('sorted', sorted);
   const checksum = sorted.reduce((acc, item, i) => acc + item.swordId * (i + 1), 0);
   // 31987430
   logger.success('checksum', checksum);
