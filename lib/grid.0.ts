@@ -317,12 +317,14 @@ export class Grid<Item, System extends CoordSystem> {
 
   [inspect.custom]() {
     const maxLength = Math.ceil(Math.log10(this.#rows));
+    const rows = new Array<Item[]>(this.#rows);
+    for (let r = 0; r < this.#rows; ++r) rows[r] = this.#array.slice(r * this.#cols, (r + 1) * this.#cols);
     return `rows: ${this.#rows}, cols: ${this.#cols}\n${
-      this.rowItems().map((row, r) =>
+      rows.map((row, r) =>
         `${(this.system === CoordSystem.Rc ? r : this.#rows - r - 1).toString().padStart(maxLength, ' ')}: ${
           row.map((cell, c) => this.inspector?.(cell, this.#unsafeIndexToCoord(r * this.#cols + c)) ?? cell).join('')
         }`
-      ).toArray().join('\n')
+      ).join('\n')
     }`;
   }
 }

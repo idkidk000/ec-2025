@@ -66,6 +66,9 @@ export class HashedSet<Key, Hash = string | number | bigint> {
   values(): SetIterator<Key> {
     return this.#map.values();
   }
+  clone(): HashedSet<Key, Hash> {
+    return new HashedSet(this.hasher, undefined, this.#map.entries());
+  }
   [Symbol.iterator]() {
     return this.keys();
   }
