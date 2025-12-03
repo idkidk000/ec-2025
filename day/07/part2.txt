@@ -1,0 +1,28 @@
+Drakvynar,Vandra,Lorfroth,Glynndra,Drakcyth,Gaerfroth,Narnarel,Karthryn,Elvarcyth,Drakryn,Agnardra,Drakgonn,Nargonn,Agnarasis,Narfal,Narasis,Lordra,Vannarel,Vangonn,Agnarvynar,Karthfal,Drakdra,Elvarryn,Glynnfal,Karthnarel,Drakfal,Narfroth,Draknarel,Lorgonn,Elvarasis,Nardra,Karthxar,Adalcyth,Karthvynar,Elvarfroth,Gaercyth,Lorasis,Lorvynar,Lorryn,Agnargonn,Elvargonn,Karthgonn,Vanvynar,Glynnryn,Lorfal,Adalfal,Narcyth,Vancyth,Glynngonn,Adalasis,Glynnfroth,Adalgonn,Drakasis,Gaervynar,Agnarfroth,Gaernarel,Agnarcyth,Karthfroth,Karthasis,Lornarel,Lorxar,Adalryn,Elvarvynar,Elvardra,Gaerryn,Gaerfal,Agnarnarel,Elvarnarel,Narxar,Vanfal,Gaerdra,Vanasis,Adalnarel,Glynnnarel,Glynnasis,Vanryn,Karthdra,Adalvynar,Vanxar,Drakxar,Adaldra,Vanfroth,Elvarxar,Glynnxar,Elvarfal,Agnarfal,Lorcyth,Gaergonn,Gaerasis,Drakfroth,Glynncyth,Narryn,Glynnvynar,Agnarryn,Narvynar,Adalfroth,Karthcyth,Adalxar,Agnarxar,Gaerxar
+
+t > h
+s > i
+o > v,t,n
+i > s
+N > a
+E > l
+a > r,l,s,k,v
+y > n,t
+d > r,v
+L > o
+l > v,d,r,f,a,g,n,c,x
+e > l,r
+G > l,a
+v > y,a
+K > a
+h > d,r,f,a,v,g,n,c,x
+x > a
+f > a,r
+r > n,e,d,a,r,y,f,o,v,g,c,x,t
+A > g,d
+c > y
+n > a,n,d,r,f,v,g,c,x
+V > a
+D > r
+k > d,r,f,a,v,g,n,c,x
+g > o,v

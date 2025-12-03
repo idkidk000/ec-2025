@@ -1,0 +1,18 @@
+Quenpyros,Havardith,Quenxeth,Havpyros,Urxeth,Urpyros,Urardith,Havxeth,Quenardith
+
+v > a,p,x
+e > t,n
+x > e
+a > r,b
+t > h
+U > r
+y > r
+r > a,d,o,b
+n > a,p,x
+i > t
+u > b
+Q > u
+o > s
+H > a
+p > y
+d > i
