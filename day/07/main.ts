@@ -1,77 +1,52 @@
 import { parseArgs } from '@/lib/args.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
 
-function part1(names: string[], rules: Map<string, Set<string>>, logger: Logger) {
-  let found: string | null = null;
-  for (const name of names) {
-    let valid = true;
-    for (let current = 0; valid && current < name.length - 1; ++current) {
-      const next = current + 1;
-      const allowedNext = rules.get(name[current]);
-      if (!allowedNext?.has(name[next])) {
-        logger.debugLow({ name, current, next, currentVal: name[current], nextVal: name[next], allowedNext });
-        valid = false;
-      }
-    }
-    if (valid) {
-      found = name;
-      break;
+type Rules = Map<string, Set<string>>;
+
+function validate(name: string, rules: Rules, logger: Logger): boolean {
+  for (let current = 0; current < name.length - 1; ++current) {
+    const next = current + 1;
+    const allowedNext = rules.get(name[current]);
+    if (!allowedNext?.has(name[next])) {
+      logger.debugMed({ name, current, next, currentVal: name[current], nextVal: name[next], allowedNext });
+      return false;
     }
   }
-  // Urardith
-  if (found) logger.success('found', found);
-  else throw new Error('no valid name found');
+  return true;
 }
 
-function part2(names: string[], rules: Map<string, Set<string>>, logger: Logger) {
-  let total = 0;
-  for (const [nameIx, name] of names.entries()) {
-    let valid = true;
-    for (let current = 0; valid && current < name.length - 1; ++current) {
-      const next = current + 1;
-      const allowedNext = rules.get(name[current]);
-      if (!allowedNext?.has(name[next])) {
-        logger.debugMed({ name, current, next, currentVal: name[current], nextVal: name[next], allowedNext });
-        valid = false;
-      }
-    }
-    if (valid) {
-      logger.debugLow('valid', name);
-      total += nameIx + 1;
-    }
-  }
+function part1(names: string[], rules: Rules, logger: Logger) {
+  const found = names.find((name) => validate(name, rules, logger));
+  // Urardith
+  logger.success('found', found);
+}
+
+function part2(names: string[], rules: Rules, logger: Logger) {
+  const total = names.reduce((acc, name, i) => acc + (validate(name, rules, logger) ? i + 1 : 0), 0);
   // 1693
   logger.success('total', total);
 }
 
-function part3(prefixes: string[], rules: Map<string, Set<string>>, logger: Logger) {
-  const names = new Set<string>();
-  const validPrefixes = prefixes.filter((prefix) => {
-    let valid = true;
-    for (let current = 0; valid && current < prefix.length - 1; ++current) {
-      const next = current + 1;
-      const allowedNext = rules.get(prefix[current]);
-      if (!allowedNext?.has(prefix[next])) valid = false;
-    }
-    logger.debugMed(`prefix${valid ? '' : ' not'} valid`, prefix);
-    return valid;
-  });
+function part3(roots: string[], rules: Rules, logger: Logger) {
+  /** includes invalid */
+  const counted = new Set<string>();
 
-  function recurse(name: string): void {
-    if (name.length >= 7) names.add(name);
-    if (name.length === 11) return;
-    // deno-lint-ignore no-non-null-assertion
-    const rule = rules.get(name.at(-1)!);
-    if (!rule) return;
-    for (const letter of rule) recurse(`${name}${letter}`);
+  /** counts valid name combinations for the given root */
+  function count(root: string): number {
+    if (counted.has(root)) return 0;
+    counted.add(root);
+    if (root.length === 11) return 1;
+    let combos = root.length >= 7 ? 1 : 0;
+    const rule = rules.get(root[root.length - 1]);
+    if (rule) { for (const next of rule) combos += count(`${root}${next}`); }
+    return combos;
   }
 
-  for (const prefix of validPrefixes) recurse(prefix);
-
-  logger.debugLow('validPrefixes', validPrefixes);
-  logger.debugLow('names', names);
+  const total = roots
+    .filter((root) => validate(root, rules, logger))
+    .reduce((acc, root) => acc + count(root), 0);
   // 8125579
-  logger.success('total', names.size);
+  logger.success('total', total);
 }
 
 function main() {

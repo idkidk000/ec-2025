@@ -1,97 +1,86 @@
 import { parseArgs } from '@/lib/args.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
-import { Utils } from '../../lib/utils.0.ts';
 
-function part1(points: number[], logger: Logger) {
-  const nails = 32;
-  let total = 0;
-  for (let currentIx = 0; currentIx < points.length - 1; ++currentIx) {
-    const nextIx = currentIx + 1;
-    const current = points[currentIx];
-    const next = points[nextIx % points.length];
-    const absDiff = Math.abs(current - next);
-    const center = absDiff === nails / 2;
-    logger.debugMed({ current, next, absDiff, center });
-    if (center) ++total;
-  }
+interface Line {
+  from: number;
+  to: number;
+}
+
+function part1(lines: Line[], nails: number, logger: Logger) {
+  const total = lines.reduce((acc, line) => {
+    const center = Math.abs(line.from - line.to) === nails / 2;
+    if (center) {
+      logger.debugMed('center', line);
+      return acc + 1;
+    }
+    return acc;
+  }, 0);
   // 63
   logger.success('total', total);
 }
 
-function part2(points: number[], logger: Logger) {
-  const lines = points.slice(0, -1).map((point, i) => ({ from: point, to: points[i + 1] }));
-  logger.debugLow(points, lines);
-  const nails = 256;
+function part2(lines: Line[], _nails: number, logger: Logger) {
   let total = 0;
   for (const [lineIx, line] of lines.entries()) {
-    logger.debugLow('checking', { line, lineIx });
-    //FIXME: this is incredibly stupid
-    const left = new Set<number>();
-    const right = new Set<number>();
-    const [min, max] = Utils.minMax(line.from, line.to);
-    for (let i = 1; i <= nails; ++i) {
-      if (i === line.from || i === line.to) continue;
-      if (i > min && i < max) left.add(i);
-      else right.add(i);
-    }
+    const [min, max] = line.from > line.to ? [line.to, line.from] : [line.from, line.to];
+    let count = 0;
     for (const other of lines.slice(0, lineIx)) {
       // intersects when other.from and other.to are on different sides of circle split along line.from to line.to
-      const intersects = (left.has(other.from) && right.has(other.to)) || (right.has(other.from) && left.has(other.to));
+      const intersects = other.from !== line.from &&
+        other.to !== line.from &&
+        other.from !== line.to &&
+        other.to !== line.to && (
+          (other.from > min && other.from < max && !(other.to > min && other.to < max)) ||
+          (other.to > min && other.to < max && !(other.from > min && other.from < max))
+        );
       if (intersects) {
-        logger.debugMed('intersects', other);
-        ++total;
+        logger.debugMed('intersects', line, other);
+        ++count;
       }
     }
+    total += count;
+    logger.debugLow({ line, count, total });
   }
   // 2922965
   logger.success('total', total);
 }
 
-function part3(points: number[], logger: Logger) {
-  // fairly sure this is karger min cut problem but i don't remember how to graphs
-  const lines = points.slice(0, -1).map((point, i) => ({ from: point, to: points[i + 1] }));
-  logger.debugLow(points, lines);
-  const nails = 256;
-  const results: { from: number; to: number; count: number }[] = [];
-  // FIXME: this includes both f:1, t:10 and f:10, t:1
+function part3(lines: Line[], nails: number, logger: Logger) {
+  let best = -1;
   for (let from = 1; from <= nails; ++from) {
-    for (let to = 1; to <= nails; ++to) {
-      if (from === to) continue;
-      logger.debugLow('testing', { from, to });
-      //FIXME: this is incredibly stupid
-      const left = new Set<number>();
-      const right = new Set<number>();
-      const [min, max] = Utils.minMax(from, to);
-      for (let i = 1; i <= nails; ++i) {
-        if (i === from || i === to) continue;
-        if (i > min && i < max) left.add(i);
-        else right.add(i);
-      }
+    for (let to = from + 1; to <= nails; ++to) {
       let count = 0;
       for (const line of lines) {
-        const intersects = (left.has(line.from) && right.has(line.to)) || (right.has(line.from) && left.has(line.to)) ||
-          (line.from === from && line.to === to) || (line.to === from && line.from === to);
+        // also intersects when from,to are matched
+        const intersects = (line.from > from && line.from < to && !(line.to >= from && line.to <= to)) ||
+          (line.to > from && line.to < to && !(line.from >= from && line.from <= to)) ||
+          (line.from === from && line.to === to) ||
+          (line.to === from && line.from === to);
         if (intersects) {
-          logger.debugMed('intersects', line);
+          logger.debugMed('intersects', { from, to }, line);
           ++count;
         }
       }
-      results.push({ from, to, count });
+      if (count > best) best = count;
+      logger.debugLow({ from, to, count, best });
     }
   }
-  const best = results.toSorted((a, b) => b.count - a.count)[0];
-  logger.debugLow({ best });
   // 2790
-  logger.success('max', best.count);
+  logger.success('best', best);
 }
 
 function main() {
   const { data, logger, part } = parseArgs(import.meta.url);
-  const points = data.split(',').map((token) => parseInt(token));
-  logger.debugLow(points);
-  if (part === 1) part1(points, logger.makeChild('part1'));
-  if (part === 2) part2(points, logger.makeChild('part2'));
-  if (part === 3) part3(points, logger.makeChild('part3'));
+  const lines = data
+    .split(',')
+    .map((token) => parseInt(token))
+    .map((from, i, arr) => ({ from, to: arr[(i + 1) % arr.length] }))
+    .slice(0, -1);
+  const nails = lines.reduce((acc, item) => Math.max(acc, item.from, item.to), 0);
+  logger.debugLow(lines, nails);
+  if (part === 1) part1(lines, nails, logger.makeChild('part1'));
+  if (part === 2) part2(lines, nails, logger.makeChild('part2'));
+  if (part === 3) part3(lines, nails, logger.makeChild('part3'));
 }
 
 main();
