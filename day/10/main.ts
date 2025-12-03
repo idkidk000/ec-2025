@@ -95,11 +95,25 @@ function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
     Sheep,
     Dragon,
   }
-  const cache = new Map<string, number>();
+  const cache = new Map<number, number>();
+  const u8 = new Uint8Array(8);
+  const f64 = new Float64Array(u8.buffer);
+
   function count(dragon: Point2DLike, sheeps: Point2DLike[], player: Player): number {
     if (sheeps.length === 0) return 1;
-    //FIXME: horrendous actually
-    const key = `${player}|${dragon.x}|${dragon.y}|${sheeps.toSorted((a, b) => a.x - b.x).map(({ x, y }) => `${x},${y}`).join('|')}`;
+    // key is deterministic without sorting provided that replacement values are spliced
+    // handling >6 sheep would require more effort
+    u8[0] = sheeps.length > 0 ? ((sheeps[0].x << 4) | sheeps[0].y) : 0;
+    u8[1] = sheeps.length > 1 ? ((sheeps[1].x << 4) | sheeps[1].y) : 0;
+    u8[2] = sheeps.length > 2 ? ((sheeps[2].x << 4) | sheeps[2].y) : 0;
+    u8[3] = sheeps.length > 3 ? ((sheeps[3].x << 4) | sheeps[3].y) : 0;
+    u8[4] = sheeps.length > 4 ? ((sheeps[4].x << 4) | sheeps[4].y) : 0;
+    u8[5] = sheeps.length > 5 ? ((sheeps[5].x << 4) | sheeps[5].y) : 0;
+    u8[6] = (dragon.x << 4) | dragon.y;
+    u8[7] = player;
+    // reading this as f64 is fine as long as bit 6 of u8[7] remains off
+    const [key] = f64;
+    logger.debugMed({ u8, key });
     const cached = cache.get(key);
     if (typeof cached === 'number') return cached;
     let value = 0;
@@ -110,22 +124,19 @@ function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
         if (!grid.inBounds(next)) {
           // invalidate this branch but allow others
           played = true;
-        } else if (shelters.has(next) || !Point2D.isEqual(next, dragon)) {
+        } else if (!Point2D.isEqual(next, dragon) || shelters.has(next)) {
           played = true;
-          const nextSheeps = [...sheeps];
-          nextSheeps[s] = next;
-          value += count(dragon, nextSheeps, Player.Dragon);
+          value += count(dragon, sheeps.toSpliced(s, 1, next), Player.Dragon);
         }
       }
       if (!played) value = count(dragon, sheeps, Player.Dragon);
       logger.debugMed('sheep', { played, value });
-    }
-    if (player === Player.Dragon) {
+    } else if (player === Player.Dragon) {
       for (const offset of dragonOffsets) {
         const next = Point2D.add(dragon, offset);
         if (!grid.inBounds(next)) continue;
-        const sheepIx = sheeps.findIndex((item) => Point2D.isEqual(item, next));
-        if (sheepIx > -1 && !shelters.has(next)) value += count(next, sheeps.toSpliced(sheepIx, 1), Player.Sheep);
+        const s = sheeps.findIndex((item) => Point2D.isEqual(item, next));
+        if (s > -1 && !shelters.has(next)) value += count(next, sheeps.toSpliced(s, 1), Player.Sheep);
         else value += count(next, sheeps, Player.Sheep);
       }
       logger.debugMed('dragon', { dragon, value });
@@ -133,8 +144,6 @@ function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
     cache.set(key, value);
     return value;
   }
-
-  if (!dragon) throw new Error('could not find dragon');
 
   const combinations = count(dragon, grid.findAll((value) => value === 'S').toArray(), Player.Sheep);
   // 19627959412631
