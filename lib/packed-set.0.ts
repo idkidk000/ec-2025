@@ -70,6 +70,9 @@ export class PackedSet<Key, Packed = string | number | bigint> {
   values(): SetIterator<Key> {
     return this.#set.keys().map(this.unpacker);
   }
+  clone(): PackedSet<Key, Packed> {
+    return new PackedSet(this.packer, this.unpacker, undefined, this.#set);
+  }
   [Symbol.iterator]() {
     return this.keys();
   }

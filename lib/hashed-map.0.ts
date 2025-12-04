@@ -4,8 +4,14 @@ import { inspect } from 'node:util';
 // `implements Map<Key, Value>` is helpful to verify the shape of the class but it cannot actually be satisfied
 export class HashedMap<Key, Value, Hash = string | number | bigint> {
   #map: Map<Hash, { key: Key; value: Value }>;
-  constructor(public readonly hasher: (key: Key) => Hash, iterable?: Iterable<[Key, Value]>) {
-    this.#map = new Map<Hash, { key: Key; value: Value }>(iterable ? [...iterable].map(([key, value]) => [hasher(key), { key, value }]) : null);
+  constructor(
+    public readonly hasher: (key: Key) => Hash,
+    iterable?: Iterable<[Key, Value]>,
+    hashedIterable?: Iterable<[Hash, { key: Key; value: Value }]>,
+  ) {
+    this.#map = new Map<Hash, { key: Key; value: Value }>(
+      iterable ? [...iterable].map(([key, value]) => [hasher(key), { key, value }]) : hashedIterable ?? null,
+    );
   }
   clear() {
     return this.#map.clear();
@@ -37,6 +43,9 @@ export class HashedMap<Key, Value, Hash = string | number | bigint> {
   }
   values(): MapIterator<Value> {
     return this.#map.values().map(({ value }) => value);
+  }
+  clone(): HashedMap<Key, Value, Hash> {
+    return new HashedMap(this.hasher, undefined, this.#map);
   }
   [Symbol.iterator]() {
     return this.entries();

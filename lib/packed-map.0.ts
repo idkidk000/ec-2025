@@ -11,8 +11,9 @@ export class PackedMap<Key, Value, Packed = string | number | bigint> {
     public readonly packer: (key: Key) => Packed,
     public readonly unpacker: (packed: Packed) => Key,
     iterable?: Iterable<[Key, Value]>,
+    packedIterable?: Iterable<[Packed, Value]>,
   ) {
-    this.#map = new Map<Packed, Value>(iterable ? [...iterable].map(([key, value]) => [packer(key), value]) : null);
+    this.#map = new Map<Packed, Value>(iterable ? [...iterable].map(([key, value]) => [packer(key), value]) : packedIterable ?? null);
   }
   clear() {
     return this.#map.clear();
@@ -44,6 +45,9 @@ export class PackedMap<Key, Value, Packed = string | number | bigint> {
   }
   values(): MapIterator<Value> {
     return this.#map.values();
+  }
+  clone(): PackedMap<Key, Value, Packed> {
+    return new PackedMap(this.packer, this.unpacker, undefined, this.#map);
   }
   [Symbol.iterator]() {
     return this.entries();

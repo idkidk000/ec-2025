@@ -150,7 +150,10 @@ export class Point2D implements Point2DLike {
               (constrainer === Offset2D.CirclePlus && x ** 2 + y ** 2 < radius2) ||
               (constrainer === Offset2D.Diamond && x + y <= radius))
           ) {
-            result.push({ x, y }, { x, y: -y }, { x: -x, y }, { x: -x, y: -y });
+            result.push({ x, y });
+            if (x) result.push({ x: -x, y });
+            if (y) result.push({ x, y: -y });
+            if (x && y) result.push({ x: -x, y: -y });
           } else { continue; }
         }
       }

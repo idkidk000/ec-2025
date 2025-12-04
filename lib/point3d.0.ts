@@ -161,16 +161,14 @@ export class Point3D implements Point3DLike {
                 (constrainer === Offset3D.SpherePlus && x ** 2 + y ** 2 + z ** 2 < radius2) ||
                 (constrainer === Offset3D.Diamond && Math.abs(x) + Math.abs(y) + Math.abs(z) <= radius))
             ) {
-              result.push(
-                { x, y, z },
-                { x, y, z: -z },
-                { x, y: -y, z },
-                { x, y: -y, z: -z },
-                { x: -x, y, z },
-                { x: -x, y, z: -z },
-                { x: -x, y: -y, z },
-                { x: -x, y: -y, z: -z },
-              );
+              result.push({ x, y, z });
+              if (z) result.push({ x, y, z: -z });
+              if (y) result.push({ x, y: -y, z });
+              if (y && z) result.push({ x, y: -y, z: -z });
+              if (x) result.push({ x: -x, y, z });
+              if (x && z) result.push({ x: -x, y, z: -z });
+              if (x && y) result.push({ x: -x, y: -y, z });
+              if (x && y && z) result.push({ x: -x, y: -y, z: -z });
             } else { continue; }
           }
         }
