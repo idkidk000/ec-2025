@@ -159,4 +159,7 @@ export class Logger {
     logger.#showLevel = this.#showLevel;
     return logger;
   }
+  clear(): void {
+    console.clear();
+  }
 }
