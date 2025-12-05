@@ -24,23 +24,21 @@ function part2(data: string, logger: Logger) {
   const count = ranges.map(({ from, to }) => to - from + 1).reduce((acc, item) => acc + item, 0);
   logger.debugLow(ranges, count);
 
-  //FIXME: range is only part of this array to help debug part 3
-  const arr = new Array<{ value: number; from: number; to: number }>(count + 1);
-  arr[0] = { from: 1, to: 1, value: 1 };
+  const items = new Array<number>(count + 1);
+  items[0] = 1;
 
   let right = 1;
-  let left = arr.length - 1;
-
+  let left = items.length - 1;
   for (const [r, range] of ranges.entries()) {
     for (let i = range.from; i <= range.to; ++i) {
-      if (r % 2 === 0) arr[right++] = { ...range, value: i };
-      else arr[left--] = { ...range, value: i };
+      if (r % 2 === 0) items[right++] = i;
+      else items[left--] = i;
     }
   }
+  logger.debugLow(items);
 
-  logger.debugLow(arr);
   // 9907
-  logger.success(arr[20252025 % arr.length]);
+  logger.success(items[20252025 % items.length]);
 }
 
 function part3(data: string, logger: Logger) {
@@ -51,33 +49,32 @@ function part3(data: string, logger: Logger) {
   const count = ranges.map(({ from, to }) => to - from + 1).reduce((acc, item) => acc + item, 0);
   logger.debugLow(ranges, count);
 
-  const arr = new Array<{ from: number; to: number }>(ranges.length + 1);
-  arr[0] = { from: 1, to: 1 };
+  const sorted = new Array<{ from: number; to: number }>(ranges.length + 1);
+  sorted[0] = { from: 1, to: 1 };
   let right = 1;
-  let left = arr.length - 1;
+  let left = sorted.length - 1;
   for (const [r, range] of ranges.entries()) {
-    if (r % 2 === 0) arr[right++] = range;
-    else arr[left--] = { from: range.to, to: range.from };
+    if (r % 2 === 0) sorted[right++] = range;
+    else sorted[left--] = { from: range.to, to: range.from };
   }
-  logger.info(arr);
+  logger.debugMed(sorted);
 
-  let remain = 202520252025 % (count + 1);
   // +1 for the {from:1,to:1}
-  // let remain = 20252025 % (count + 1);
+  let remain = 202520252025 % (count + 1);
   logger.debugLow(remain);
 
-  for (const range of arr) {
+  let result: number | null = null;
+  for (const range of sorted) {
     const length = Math.abs(range.to - range.from) + 1;
     logger.debugLow({ remain, range, length });
     if (remain > length) remain -= length;
     else {
-      const final = range.from < range.to ? range.from + remain : range.from - remain;
-      logger.info({ range, remain });
-      // 363609
-      logger.success('final', final);
+      result = range.from + (range.from < range.to ? remain : -remain);
       break;
     }
   }
+  // 363609
+  logger.success(result);
 }
 
 function main() {

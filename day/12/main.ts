@@ -93,7 +93,7 @@ function part3(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
 
   const start: ({ depth: number } & Point2DLike)[] = bests.values().map((item) => ({ depth: 0, ...item })).toArray();
 
-  const queue = new BinaryHeap((a, b) => a.depth - b.depth, start);
+  const queue = new BinaryHeap<{ depth: number } & Point2DLike>((a, b) => a.depth - b.depth, start);
   const finalDestroyed = new HashedSet<Point2DLike>(Point2D.hash, start);
 
   while (queue.length) {
