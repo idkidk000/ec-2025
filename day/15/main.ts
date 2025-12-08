@@ -121,7 +121,7 @@ function part3(data: string, logger: Logger) {
   logger.debugLow({ walls, start, end, Xs, Ys });
 
   const queue = new BinaryHeap<Point2DLike & { cost: number; moves: number }>((a, b) => a.cost - b.cost, [{ ...start, cost: 0, moves: 0 }]);
-
+  // PackedSet using Point2D.pack32 is faster but `pack32` overflowed and it took me far too long to realise
   const seen = new HashedSet(Point2D.hash);
   let cost: number | null = null;
 
