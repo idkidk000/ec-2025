@@ -1,4 +1,4 @@
-import { parseArgs } from '@/lib/args.0.ts';
+import { EcArgParser } from '@/lib/args.1.ts';
 import { Logger } from '@/lib/logger.0.ts';
 import { Utils } from '@/lib/utils.0.ts';
 
@@ -33,7 +33,7 @@ function part3(names: string[], operations: number[], logger: Logger) {
 }
 
 function main() {
-  const { data, logger, part } = parseArgs(import.meta.url);
+  const { data, logger, part } = new EcArgParser(import.meta.url);
   const [names, moves] = data.split('\n\n').map((line) => line.split(','));
   const operations = moves.map((token) => parseInt(token.slice(1)) * (token.slice(0, 1) === 'L' ? -1 : 1));
   logger.debugLow(names, operations);

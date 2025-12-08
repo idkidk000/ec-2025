@@ -1,0 +1,31 @@
+{
+  "fmt": {
+    "lineWidth": 160,
+    "singleQuote": true,
+    "trailingCommas": "onlyMultiLine",
+    "useBraces": "preferNone"
+  },
+  "imports": {
+    "@/": "./"
+  },
+  "lint": {
+    "rules": {
+      "include": [
+        "no-console",
+        "camelcase",
+        "default-param-last",
+        "eqeqeq",
+        "no-eval",
+        "no-non-null-asserted-optional-chain",
+        "no-non-null-assertion",
+        "no-useless-rename",
+        "prefer-ascii",
+        "single-var-declarator",
+        "triple-slash-reference",
+        "valid-typeof"
+      ],
+      "tags": ["recommended"]
+    }
+  },
+  "minimumDependencyAge": "P2D"
+}

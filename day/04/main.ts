@@ -1,4 +1,4 @@
-import { parseArgs } from '@/lib/args.0.ts';
+import { EcArgParser } from '@/lib/args.1.ts';
 import { Logger } from '@/lib/logger.0.ts';
 
 function part1(multiplier: number, logger: Logger) {
@@ -20,7 +20,7 @@ function part3(multiplier: number, logger: Logger) {
 }
 
 function main() {
-  const { data, logger, part } = parseArgs(import.meta.url);
+  const { data, logger, part } = new EcArgParser(import.meta.url);
   const gears = data.split('\n').map((token) => {
     const parts = token.split('|');
     return { in: parseInt(parts[0]), out: parseInt(parts.at(1) ?? parts[0]) };

@@ -1,5 +1,5 @@
 import { inspect } from 'node:util';
-import { Point2DLike } from '@/lib/point2d.0.ts';
+import { Point2DLike } from './point2d.0.ts';
 
 export enum CoordSystem {
   Rc,

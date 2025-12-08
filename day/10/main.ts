@@ -1,4 +1,4 @@
-import { parseArgs } from '@/lib/args.0.ts';
+import { EcArgParser } from '@/lib/args.1.ts';
 import { CoordSystem, Grid } from '@/lib/grid.0.ts';
 import { HashedSet } from '@/lib/hashed-set.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
@@ -151,7 +151,7 @@ function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
 }
 
 function main() {
-  const { data, logger, part } = parseArgs(import.meta.url);
+  const { data, logger, part } = new EcArgParser(import.meta.url);
   const grid = new Grid(data.split('\n').map((line) => line.split('')), CoordSystem.Xy);
   const dragon = grid.find((item) => item === 'D');
   if (!dragon) throw new Error('could not find dragon');

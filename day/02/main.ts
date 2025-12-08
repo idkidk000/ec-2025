@@ -1,4 +1,4 @@
-import { parseArgs } from '@/lib/args.0.ts';
+import { EcArgParser } from '@/lib/args.1.ts';
 import { Logger } from '@/lib/logger.0.ts';
 import { inspect } from 'node:util';
 
@@ -115,7 +115,7 @@ function part3(input: Complex, logger: Logger) {
 }
 
 function main() {
-  const { data, logger, part } = parseArgs(import.meta.url);
+  const { data, logger, part } = new EcArgParser(import.meta.url);
   const match = /A=\[(?<x>-?\d+),(?<y>-?\d+)\]/.exec(data);
   if (!match?.groups) throw new Error('could not parse input');
   const input = new Complex(parseInt(match.groups.x), parseInt(match.groups.y));

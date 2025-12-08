@@ -1,4 +1,4 @@
-import { parseArgs } from '@/lib/args.0.ts';
+import { EcArgParser } from '@/lib/args.1.ts';
 import { Logger } from '@/lib/logger.0.ts';
 
 type Rules = Map<string, Set<string>>;
@@ -50,7 +50,7 @@ function part3(roots: string[], rules: Rules, logger: Logger) {
 }
 
 function main() {
-  const { data, logger, part } = parseArgs(import.meta.url);
+  const { data, logger, part } = new EcArgParser(import.meta.url);
   const parts = data.split('\n\n');
   const names = parts[0].split(',');
   const rules = parts[1].split('\n').map((line) => {

@@ -1,0 +1,3 @@
+[submodule "lib"]
+	path = lib
+	url = ../aoc-2025-deno-libs.git

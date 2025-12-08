@@ -1,4 +1,4 @@
-import { Point2DLike } from '@/lib/point2d.0.ts';
+import { Point2DLike } from './point2d.0.ts';
 
 export interface Line {
   a: Point2DLike;

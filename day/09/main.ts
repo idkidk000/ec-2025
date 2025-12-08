@@ -1,4 +1,4 @@
-import { parseArgs } from '@/lib/args.0.ts';
+import { EcArgParser } from '@/lib/args.1.ts';
 import { Logger } from '@/lib/logger.0.ts';
 
 interface Sequence {
@@ -106,7 +106,7 @@ function part3(sequences: Sequence[], logger: Logger) {
 }
 
 function main() {
-  const { data, logger, part } = parseArgs(import.meta.url);
+  const { data, logger, part } = new EcArgParser(import.meta.url);
   const sequences = data.split('\n').map((line) => {
     const tokens = line.split(':');
     return { id: parseInt(tokens[0]), data: tokens[1] };

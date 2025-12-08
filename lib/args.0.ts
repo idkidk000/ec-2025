@@ -1,25 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Logger } from '@/lib/logger.0.ts';
+import { Logger } from './logger.0.ts';
 
-type Defaults = {
-  fileName?: string;
-  logLevel: number;
-  part: number;
-};
-type Return = Required<Defaults> & { data: string; logger: Logger };
-const BASE_DEFAULTS: Defaults = {
+const BASE_DEFAULTS = {
+  fileName: 'input.txt',
   logLevel: 0,
-  part: 1,
+  part: 0,
 };
+type Defaults = typeof BASE_DEFAULTS;
 
 /** Parses the following args:
- * - `-f` `fileName` loads puzzle input from `fileName(\.txt)?`. Default `part${part}.txt`
+ * - `-f` `fileName` loads puzzle input from `fileName(\.txt)?`. Default `input.txt`
  * - `-l` `logLevel` sets log level from `0` - `Debug:High` to `6` - `Error`. Default `0`
- * - `-p` `part` selects which part of the puzzle to run - `1` is `part1`, etc. Default `1`
+ * - `-p` `part` selects which part of the puzzle to run - `1` is `part1`, `2` is `part2`, other is `both`. Default `0`
  */
-export function parseArgs(importMetaUrl: string, defaults?: Partial<Defaults>): Return {
+export function parseArgs(importMetaUrl: string, defaults?: Partial<Defaults>) {
   const parsed: Defaults = {
     ...BASE_DEFAULTS,
     ...defaults,
@@ -35,10 +31,9 @@ export function parseArgs(importMetaUrl: string, defaults?: Partial<Defaults>): 
     if (key === '-l') parsed.logLevel = parseInt(val);
     if (key === '-p') parsed.part = parseInt(val);
   }
-  if (typeof parsed.fileName === 'undefined') parsed.fileName = `part${parsed.part}.txt`;
   const filePath = join(dirname(fileURLToPath(importMetaUrl)), parsed.fileName);
   const data = readFileSync(filePath, { encoding: 'utf-8' });
   const logger = new Logger(importMetaUrl, undefined, { logLevel: parsed.logLevel });
   logger.debugLow(parsed);
-  return { ...parsed, data, logger } as Return;
+  return { ...parsed, data, part1: parsed.part !== 2, part2: parsed.part !== 1, logger };
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Logger } from '@/lib/logger.0.ts';
+import { Logger } from './logger.0.ts';
 
 abstract class ArgParser {
   #logger: Logger;
