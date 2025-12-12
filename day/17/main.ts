@@ -1,6 +1,6 @@
 import { EcArgParser } from '@/lib/args.1.ts';
 import { CoordSystem, Grid } from '@/lib/grid.0.ts';
-import { ansiStyles, Logger } from '@/lib/logger.0.ts';
+import { Logger } from '@/lib/logger.0.ts';
 import { PackedMap } from '@/lib/packed-map.0.ts';
 import { PackedSet } from '@/lib/packed-set.0.ts';
 import { Offset2D, Point2D, Point2DLike } from '@/lib/point2d.0.ts';
@@ -57,40 +57,22 @@ function part3(data: string, logger: Logger) {
   volcano.cellSet(start, 0);
   logger.debugLow({ center, start });
 
-  enum Quadrant {
+  enum Checkpoint {
     North = 8,
-    West = 4,
+    East = 4,
     South = 2,
-    East = 1,
+    West = 1,
   }
-  const ALL_QUADRANTS = Quadrant.North | Quadrant.East | Quadrant.South | Quadrant.West;
+  const ALL_CHECKPOINTS = Checkpoint.North | Checkpoint.East | Checkpoint.South | Checkpoint.West;
   const TIMESTEP = 30;
 
-  function getQuadrant(point: Point2DLike): Quadrant {
-    const northDist = volcano.rows - 1 - point.y;
-    const eastDist = volcano.cols - 1 - point.x;
-    const southDist = point.y;
-    const westDist = point.x;
-    if (northDist <= Math.min(eastDist, westDist)) return Quadrant.North;
-    if (southDist <= Math.min(eastDist, westDist)) return Quadrant.South;
-    if (eastDist <= Math.min(northDist, southDist)) return Quadrant.East;
-    if (westDist <= Math.min(northDist, southDist)) return Quadrant.West;
-    throw new Error('oh no');
+  function getCheckpoint(point: Point2DLike): Checkpoint | 0 {
+    if (point.y > volcano.rows / 2 && point.x === Math.round((volcano.cols - 1) / 2)) return Checkpoint.North;
+    if (point.y < volcano.rows / 2 && point.x === Math.round((volcano.cols - 1) / 2)) return Checkpoint.South;
+    if (point.x > volcano.cols / 2 && point.y === Math.round((volcano.rows - 1) / 2)) return Checkpoint.East;
+    if (point.x < volcano.cols / 2 && point.y === Math.round((volcano.rows - 1) / 2)) return Checkpoint.West;
+    return 0;
   }
-  // volcano.inspector = (cell, coord) => {
-  //   const quad = getQuadrant(coord);
-  //   return `${
-  //     quad === Quadrant.North
-  //       ? ansiStyles.fgIntense.red
-  //       : quad === Quadrant.East
-  //       ? ansiStyles.fgIntense.green
-  //       : quad === Quadrant.South
-  //       ? ansiStyles.fgIntense.cyan
-  //       : ansiStyles.fgIntense.yellow
-  //   }${cell}${ansiStyles.reset}`;
-  // };
-  // logger.info(volcano);
-  // return;
 
   const offsets = Point2D.offsets(1, Offset2D.Cardinal);
   let lowestCompleted = Infinity;
@@ -104,13 +86,13 @@ function part3(data: string, logger: Logger) {
     const destroyed = new PackedSet(Point2D.pack32, Point2D.unpack32, [...Point2D.neighbours(center, timestep, Offset2D.Circle), center]);
     logger.debugLow({ timestep, nextTimestepAt });
 
-    /** `checkpoints` is a bitfield of `Quadrant` */
+    /** `checkpoints` is a bitfield of `Checkpoint`s */
     // deno-lint-ignore no-inner-declarations
     function recurse(position: Point2DLike, elapsed: number, checkpoints: number) {
       if (!start) throw new Error('shush');
       if (elapsed >= nextTimestepAt || elapsed >= lowestCompleted || elapsed >= (pointTimes.get(checkpoints).get(position) ?? Infinity)) return;
       pointTimes.get(checkpoints).set(position, elapsed);
-      if (checkpoints === ALL_QUADRANTS && Point2D.isEqual(start, position)) {
+      if (checkpoints === ALL_CHECKPOINTS && Point2D.isEqual(start, position)) {
         logger.debugLow('completed', { timestep, checkpoints, elapsed });
         lowestCompleted = elapsed;
         return;
@@ -119,12 +101,14 @@ function part3(data: string, logger: Logger) {
         const nextPosition = Point2D.add(position, offset);
         if (!volcano.inBounds(nextPosition)) continue;
         if (destroyed.has(nextPosition)) continue;
-        const nextQuadrant = getQuadrant(nextPosition);
-        if (nextQuadrant === Quadrant.West && (!(checkpoints & Quadrant.North))) continue;
-        if (nextQuadrant === Quadrant.South && (!(checkpoints & Quadrant.West))) continue;
-        if (nextQuadrant === Quadrant.East && (!(checkpoints & Quadrant.South))) continue;
+        const nextCheckpoint = getCheckpoint(nextPosition);
+        // prune some nonsense
+        if (nextCheckpoint === Checkpoint.East && !(checkpoints & Checkpoint.North)) return;
+        if (nextCheckpoint === Checkpoint.South && !(checkpoints & Checkpoint.East)) return;
+        if (nextCheckpoint === Checkpoint.West && !(checkpoints & Checkpoint.South)) return;
+        const nextCheckpoints = checkpoints | nextCheckpoint;
         const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
-        recurse(nextPosition, nextElapsed, checkpoints | nextQuadrant);
+        recurse(nextPosition, nextElapsed, nextCheckpoints);
       }
     }
 
@@ -132,7 +116,10 @@ function part3(data: string, logger: Logger) {
     recurse(Utils.pick(start, ['x', 'y']), 0, 0);
   }
 
-  logger.success(lowestCompleted);
+  logger.debugLow({ lowestCompleted });
+  const result = lowestCompleted * Math.floor(lowestCompleted / TIMESTEP);
+  // 42143
+  logger.success(result);
 }
 
 function main() {
