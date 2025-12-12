@@ -1,11 +1,11 @@
 import { EcArgParser } from '@/lib/args.1.ts';
 import { CoordSystem, Grid } from '@/lib/grid.0.ts';
-import { Logger } from '@/lib/logger.0.ts';
-import { Offset2D, Point2D, Point2DLike } from '@/lib/point2d.0.ts';
-import { BinaryHeap } from '@/lib/binary-heap.0.ts';
+import { ansiStyles, Logger } from '@/lib/logger.0.ts';
+import { PackedMap } from '@/lib/packed-map.0.ts';
 import { PackedSet } from '@/lib/packed-set.0.ts';
-import { Utils } from '../../lib/utils.0.ts';
-import { checkPrime } from 'node:crypto';
+import { Offset2D, Point2D, Point2DLike } from '@/lib/point2d.0.ts';
+import { Utils } from '@/lib/utils.0.ts';
+import { DefaultMap } from '@/lib/default-map.0.ts';
 
 function part1(data: string, logger: Logger) {
   const volcano = new Grid(data.split('\n').map((line) => line.split('').map((token) => token === '@' ? 0 : parseInt(token))), CoordSystem.Xy);
@@ -60,7 +60,7 @@ function part3(data: string, logger: Logger) {
   // simulate the volcano and generate sets of oob coordinates per timestep
   const oobs = new Map<number, PackedSet<Point2DLike, number>>();
   for (let radius = 1; radius <= Math.max(volcano.rows, volcano.cols); ++radius)
-    oobs.set(radius, new PackedSet(Point2D.hash, undefined, [...Point2D.neighbours(center, radius, Offset2D.Circle), center]));
+    oobs.set(radius, new PackedSet(Point2D.pack32, Point2D.unpack32, [...Point2D.neighbours(center, radius, Offset2D.Circle), center]));
   logger.debugLow('oobs', oobs.entries().map(([k, v]) => [k, v.size]).toArray());
 
   enum Quadrant {
@@ -69,8 +69,10 @@ function part3(data: string, logger: Logger) {
     South = 2,
     West = 1,
   }
-  const allQuadrants = Quadrant.North | Quadrant.East | Quadrant.South | Quadrant.West;
+  const ALL_QUADRANTS = Quadrant.North | Quadrant.East | Quadrant.South | Quadrant.West;
+  const TIMESTEP = 30;
 
+  /** not perfect but hopefully good enough */
   function getQuadrant(point: Point2DLike): Quadrant {
     const northDist = volcano.rows - point.y;
     const eastDist = volcano.cols - point.x;
@@ -83,67 +85,87 @@ function part3(data: string, logger: Logger) {
     throw new Error('oh no');
   }
 
-  interface QueueItem {
-    position: Point2DLike;
-    elapsed: number;
-    /** mask of `Quadrant`s */
-    checkpoints: number;
-    /** needs to be fully checked whenever the timestep increments */
-    path: Point2DLike[];
-  }
-
-  /** this might be better as a recursive function */
-  const queue = new BinaryHeap<QueueItem>((a, b) =>
-    b.checkpoints - a.checkpoints ||
-    a.elapsed - b.elapsed
-  );
-
-  queue.push({ elapsed: 0, position: Utils.pick(start, ['x', 'y']), checkpoints: getQuadrant(start), path: [Utils.pick(start, ['x', 'y'])] });
+  // const grid = new Grid(volcano);
+  // grid.fill((_, coord) => getQuadrant(coord));
+  // logger.info(grid);
 
   const offsets = Point2D.offsets(1, Offset2D.Cardinal);
+  /** first level index is timestep*/
+  // TODO: see if more of the type can be inferred
+  // FIXME: i think this is still not good enough
+  const pointTimes = new DefaultMap<number, PackedMap<Point2DLike, { checkpoints: number; elapsed: number }, number>>(() =>
+    new PackedMap<Point2DLike, { checkpoints: number; elapsed: number }, number>(Point2D.pack32, Point2D.unpack32)
+  );
+  let lowestCompleted = Infinity;
 
-  const seenCheckpoints = new Set<number>();
-  const seenElapseds = new Set<number>();
-  let best = Infinity;
-  while (queue.length) {
-    const item = queue.pop();
-    if (!item) continue;
-    if (!seenCheckpoints.has(item.checkpoints) || !seenElapseds.has(item.elapsed)) {
-      logger.debugMed({ item });
-      seenCheckpoints.add(item.checkpoints);
-      seenElapseds.add(item.elapsed);
+  // for debug
+  const checkpointHighestElapsed = new Map<number, number>();
+
+  function recurse(position: Point2DLike, elapsed: number, checkpoints: number, path: Point2DLike[]) {
+    const timestep = Math.floor(elapsed / TIMESTEP);
+    // debug
+    if ((checkpointHighestElapsed.get(checkpoints) ?? 0) < elapsed) {
+      const grid = new Grid(volcano);
+      const currentOobs = oobs.get(timestep);
+      grid.inspector = (cell, coord) => {
+        const onPath = path.find((pos) => Point2D.isEqual(pos, coord));
+        const destroyed = currentOobs?.has(coord);
+        const isCurrent = Point2D.isEqual(position, coord);
+        // deno-lint-ignore no-non-null-assertion
+        const isStart = Point2D.isEqual(start!, coord);
+        return onPath
+          ? `${isCurrent ? ansiStyles.fgIntense.green : isStart ? ansiStyles.fgIntense.cyan : ansiStyles.fgIntense.red}${ansiStyles.bold}${
+            destroyed ? '#' : cell
+          }${ansiStyles.reset}`
+          : destroyed
+          ? '#'
+          : String(cell);
+      };
+      logger.debugLow({ position, elapsed, checkpoints, pathLen: path.length }, grid);
+      checkpointHighestElapsed.set(checkpoints, elapsed);
     }
-    if (item.elapsed >= best) continue;
-    if ((item.checkpoints & allQuadrants) === allQuadrants && Point2D.isEqual(start, item.position)) {
-      logger.debugLow('completed', item);
-      if (item.elapsed < best) best = item.elapsed;
-      continue;
+    if (elapsed >= lowestCompleted) return;
+    const pointBest = pointTimes.get(timestep).get(position);
+    if (pointBest && pointBest.checkpoints >= checkpoints && pointBest.elapsed <= elapsed) {
+      // BUG: this is still wrong. just adding timestep as a primary index is not enough. a path which took slightly longer and falls into the same timestep might take longer before part of it gets destroyed
+      if (checkpoints === ALL_QUADRANTS) logger.debugMed('abort due to pointBest', { position, elapsed, checkpoints, pointBest });
+      return;
     }
+    pointTimes.get(timestep).set(position, { checkpoints, elapsed });
+
+    // deno thinks the `start` const which i already asserted was not undefined might now be undefined
+    // deno-lint-ignore no-non-null-assertion
+    if ((checkpoints & ALL_QUADRANTS) === ALL_QUADRANTS && Point2D.isEqual(start!, position)) {
+      logger.debugLow('completed', elapsed);
+      lowestCompleted = elapsed;
+      return;
+    }
+
+    // FIXME: these could be better sorted according to quadrant
     for (const offset of offsets) {
-      const nextPosition = Point2D.add(item.position, offset);
+      const nextPosition = Point2D.add(position, offset);
+      // simple grid bounds check
       if (!volcano.inBounds(nextPosition)) continue;
-      const nextElapsed = item.elapsed + (volcano.cellAt(nextPosition) ?? 0);
-      const nextPath = [...item.path, nextPosition];
-      if (Math.floor(item.elapsed / 30) !== Math.floor(nextElapsed / 30)) {
-        // need to do full path check
-        if (nextPath.some((position) => oobs.get(Math.floor(nextElapsed / 30))?.has(position))) continue;
-      } else if (oobs.get(Math.floor(nextElapsed / 30))?.has(item.position)) { continue; }
       const quadrant = getQuadrant(nextPosition);
       // FIXME: this assumes that we always start in north
-      if (quadrant === Quadrant.East && (!(item.checkpoints & Quadrant.North))) continue;
-      if (quadrant === Quadrant.South && (!(item.checkpoints & Quadrant.East))) continue;
-      if (quadrant === Quadrant.West && (!(item.checkpoints & Quadrant.South))) continue;
-      const next: QueueItem = {
-        checkpoints: item.checkpoints | quadrant,
-        elapsed: nextElapsed,
-        position: nextPosition,
-        path: nextPath,
-      };
-      queue.push(next);
+      // hopefully these constraints aren't too restrictive
+      if (quadrant === Quadrant.East && (!(checkpoints & Quadrant.North))) continue;
+      if (quadrant === Quadrant.South && (!(checkpoints & Quadrant.East))) continue;
+      if (quadrant === Quadrant.West && (!(checkpoints & Quadrant.South))) continue;
+      const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
+      const nextPath = [...path, nextPosition];
+      const nextTimestep = Math.floor(nextElapsed / TIMESTEP);
+      const nextOobs = oobs.get(nextTimestep);
+      if (timestep === nextTimestep && nextOobs?.has(position)) continue;
+      // timestep has changed - need to do full path check
+      if (timestep !== nextTimestep && nextPath.some((position) => nextOobs?.has(position))) continue;
+      recurse(nextPosition, nextElapsed, checkpoints | quadrant, nextPath);
     }
   }
 
-  logger.success(best);
+  recurse(Utils.pick(start, ['x', 'y']), 0, 0, []);
+
+  logger.success(lowestCompleted);
 }
 
 function main() {
