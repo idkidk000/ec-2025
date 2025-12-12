@@ -51,8 +51,8 @@ function part3(data: string, logger: Logger) {
     data.split('\n').map((line) => line.split('').map((token) => token === '@' ? 0 : token === 'S' ? -1 : parseInt(token))),
     CoordSystem.Xy,
   );
-  const center = volcano.find((value) => value === 0);
-  const start = volcano.find((value) => value === -1);
+  const center = volcano.find((value) => value === 0) as Point2DLike;
+  const start = volcano.find((value) => value === -1) as Point2DLike;
   if (!center || !start) throw new Error('oh no');
   volcano.cellSet(start, 0);
   logger.debugLow({ center, start });
@@ -63,33 +63,31 @@ function part3(data: string, logger: Logger) {
     South = 2,
     West = 1,
   }
+
   const ALL_CHECKPOINTS = Checkpoint.North | Checkpoint.East | Checkpoint.South | Checkpoint.West;
   const TIMESTEP = 30;
 
   function getCheckpoint(point: Point2DLike): Checkpoint | 0 {
-    if (point.y > volcano.rows / 2 && point.x === Math.round((volcano.cols - 1) / 2)) return Checkpoint.North;
-    if (point.y < volcano.rows / 2 && point.x === Math.round((volcano.cols - 1) / 2)) return Checkpoint.South;
-    if (point.x > volcano.cols / 2 && point.y === Math.round((volcano.rows - 1) / 2)) return Checkpoint.East;
-    if (point.x < volcano.cols / 2 && point.y === Math.round((volcano.rows - 1) / 2)) return Checkpoint.West;
+    if (point.y > center.y && point.x === center.x) return Checkpoint.North;
+    if (point.y < center.y && point.x === center.x) return Checkpoint.South;
+    if (point.y === center.y && point.x > center.x) return Checkpoint.East;
+    if (point.y === center.y && point.x < center.x) return Checkpoint.West;
     return 0;
   }
 
   const offsets = Point2D.offsets(1, Offset2D.Cardinal);
-  let lowestCompleted = Infinity;
 
-  for (let timestep = 1; lowestCompleted === Infinity; ++timestep) {
+  function simulate(timestep: number): number {
+    let lowestCompleted = Infinity;
     /** first level index is `checkpoints` */
     const pointTimes = new DefaultMap<number, PackedMap<Point2DLike, number, number>>(() =>
       new PackedMap<Point2DLike, number, number>(Point2D.pack32, Point2D.unpack32)
     );
     const nextTimestepAt = (timestep + 1) * TIMESTEP;
     const destroyed = new PackedSet(Point2D.pack32, Point2D.unpack32, [...Point2D.neighbours(center, timestep, Offset2D.Circle), center]);
-    logger.debugLow({ timestep, nextTimestepAt });
 
     /** `checkpoints` is a bitfield of `Checkpoint`s */
-    // deno-lint-ignore no-inner-declarations
     function recurse(position: Point2DLike, elapsed: number, checkpoints: number) {
-      if (!start) throw new Error('shush');
       if (elapsed >= nextTimestepAt || elapsed >= lowestCompleted || elapsed >= (pointTimes.get(checkpoints).get(position) ?? Infinity)) return;
       pointTimes.get(checkpoints).set(position, elapsed);
       if (checkpoints === ALL_CHECKPOINTS && Point2D.isEqual(start, position)) {
@@ -99,25 +97,27 @@ function part3(data: string, logger: Logger) {
       }
       for (const offset of offsets) {
         const nextPosition = Point2D.add(position, offset);
-        if (!volcano.inBounds(nextPosition)) continue;
-        if (destroyed.has(nextPosition)) continue;
+        if (!volcano.inBounds(nextPosition) || destroyed.has(nextPosition)) continue;
         const nextCheckpoint = getCheckpoint(nextPosition);
-        // prune some nonsense
+        // force paths to be anticlockwise, the same as `offsets`
         if (nextCheckpoint === Checkpoint.East && !(checkpoints & Checkpoint.North)) return;
         if (nextCheckpoint === Checkpoint.South && !(checkpoints & Checkpoint.East)) return;
         if (nextCheckpoint === Checkpoint.West && !(checkpoints & Checkpoint.South)) return;
-        const nextCheckpoints = checkpoints | nextCheckpoint;
-        const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
-        recurse(nextPosition, nextElapsed, nextCheckpoints);
+        recurse(nextPosition, elapsed + (volcano.cellAt(nextPosition) ?? 0), checkpoints | nextCheckpoint);
       }
     }
 
-    if (destroyed.has(start)) break;
-    recurse(Utils.pick(start, ['x', 'y']), 0, 0);
+    if (!destroyed.has(start)) recurse(Utils.pick(start, ['x', 'y']), 0, 0);
+    return lowestCompleted;
   }
 
-  logger.debugLow({ lowestCompleted });
-  const result = lowestCompleted * Math.floor(lowestCompleted / TIMESTEP);
+  let best = Infinity;
+  for (let timestep = 1; best === Infinity; ++timestep) {
+    best = simulate(timestep);
+    logger.debugLow({ timestep, best });
+  }
+
+  const result = best * Math.floor(best / TIMESTEP);
   // 42143
   logger.success(result);
 }
