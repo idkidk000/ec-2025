@@ -1,6 +1,5 @@
 import { EcArgParser } from '@/lib/args.1.ts';
 import { BinaryHeap } from '@/lib/binary-heap.0.ts';
-import { HashedSet } from '@/lib/hashed-set.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
 import { PackedSet } from '@/lib/packed-set.0.ts';
 import { Offset2D, Point2D, Point2DLike } from '@/lib/point2d.0.ts';
@@ -16,7 +15,7 @@ enum Heading {
   South,
   West,
 }
-type Vec2D = Point2DLike & { heading: Heading };
+type Position = Point2DLike & { heading: Heading };
 
 function mapWalls(data: string, logger: Logger): { start: Point2DLike; end: Point2DLike; walls: PackedSet<Point2DLike, number> } {
   const instructions = data.split(',').map((token) => {
@@ -24,7 +23,7 @@ function mapWalls(data: string, logger: Logger): { start: Point2DLike; end: Poin
     const length = parseInt(token.slice(1));
     return { rotate, length };
   });
-  const position: Vec2D = { x: 0, y: 0, heading: Heading.North };
+  const position: Position = { x: 0, y: 0, heading: Heading.North };
   const start = { ...position };
   const walls = new PackedSet(Point2D.pack32, Point2D.unpack32);
   for (const instruction of instructions) {
@@ -87,8 +86,8 @@ function part3(data: string, logger: Logger) {
     const length = parseInt(token.slice(1));
     return { rotate, length };
   });
-  let position: Vec2D = { x: 0, y: 0, heading: Heading.North };
-  let nextPosition: Vec2D = { ...position };
+  let position: Position = { x: 0, y: 0, heading: Heading.North };
+  let nextPosition: Position = { ...position };
   const start = { x: position.x, y: position.y };
   const walls: { from: Point2DLike; to: Point2DLike }[] = [];
   for (const instruction of instructions) {
@@ -120,9 +119,9 @@ function part3(data: string, logger: Logger) {
   const Ys = [...new Set([...walls.flatMap((wall) => [wall.from.y, wall.to.y].flatMap((i) => [i - 1, i + 1])), end.y])].toSorted((a, b) => a - b);
   logger.debugLow({ walls, start, end, Xs, Ys });
 
-  const queue = new BinaryHeap<Point2DLike & { cost: number; moves: number }>((a, b) => a.cost - b.cost, [{ ...start, cost: 0, moves: 0 }]);
-  // PackedSet using Point2D.pack32 is faster but `pack32` overflowed and it took me far too long to realise
-  const seen = new HashedSet(Point2D.hash);
+  const queue = new BinaryHeap<Point2DLike & { cost: number }>((a, b) => a.cost - b.cost, [{ ...start, cost: 0 }]);
+  // Point2D.pack32 is faster but lossy at these values, and i don't need an unpacker
+  const seen = new PackedSet(Point2D.hash);
   let cost: number | null = null;
 
   while (queue.length) {
@@ -174,7 +173,6 @@ function part3(data: string, logger: Logger) {
     for (const x of Xs.filter((x) => x > westLimit && x < eastLimit)) {
       const nextItem = {
         cost: item.cost + Math.abs(x - item.x),
-        moves: item.moves + 1,
         x,
         y: item.y,
       };
@@ -184,7 +182,6 @@ function part3(data: string, logger: Logger) {
     for (const y of Ys.filter((y) => y > southLimit && y < northLimit)) {
       const nextItem = {
         cost: item.cost + Math.abs(y - item.y),
-        moves: item.moves + 1,
         x: item.x,
         y,
       };
@@ -194,7 +191,7 @@ function part3(data: string, logger: Logger) {
   }
   if (cost === null) throw new Error('no path found');
   // 466532343
-  else logger.success('cost', cost);
+  logger.success('cost', cost);
 }
 
 function main() {
