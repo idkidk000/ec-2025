@@ -57,113 +57,80 @@ function part3(data: string, logger: Logger) {
   volcano.cellSet(start, 0);
   logger.debugLow({ center, start });
 
-  // simulate the volcano and generate sets of oob coordinates per timestep
-  const oobs = new Map<number, PackedSet<Point2DLike, number>>();
-  for (let radius = 1; radius <= Math.max(volcano.rows, volcano.cols); ++radius)
-    oobs.set(radius, new PackedSet(Point2D.pack32, Point2D.unpack32, [...Point2D.neighbours(center, radius, Offset2D.Circle), center]));
-  logger.debugLow('oobs', oobs.entries().map(([k, v]) => [k, v.size]).toArray());
-
   enum Quadrant {
     North = 8,
-    East = 4,
+    West = 4,
     South = 2,
-    West = 1,
+    East = 1,
   }
   const ALL_QUADRANTS = Quadrant.North | Quadrant.East | Quadrant.South | Quadrant.West;
   const TIMESTEP = 30;
 
-  /** not perfect but hopefully good enough */
   function getQuadrant(point: Point2DLike): Quadrant {
-    const northDist = volcano.rows - point.y;
-    const eastDist = volcano.cols - point.x;
+    const northDist = volcano.rows - 1 - point.y;
+    const eastDist = volcano.cols - 1 - point.x;
     const southDist = point.y;
     const westDist = point.x;
     if (northDist <= Math.min(eastDist, westDist)) return Quadrant.North;
-    if (eastDist <= Math.min(northDist, southDist)) return Quadrant.East;
     if (southDist <= Math.min(eastDist, westDist)) return Quadrant.South;
+    if (eastDist <= Math.min(northDist, southDist)) return Quadrant.East;
     if (westDist <= Math.min(northDist, southDist)) return Quadrant.West;
     throw new Error('oh no');
   }
-
-  // const grid = new Grid(volcano);
-  // grid.fill((_, coord) => getQuadrant(coord));
-  // logger.info(grid);
+  // volcano.inspector = (cell, coord) => {
+  //   const quad = getQuadrant(coord);
+  //   return `${
+  //     quad === Quadrant.North
+  //       ? ansiStyles.fgIntense.red
+  //       : quad === Quadrant.East
+  //       ? ansiStyles.fgIntense.green
+  //       : quad === Quadrant.South
+  //       ? ansiStyles.fgIntense.cyan
+  //       : ansiStyles.fgIntense.yellow
+  //   }${cell}${ansiStyles.reset}`;
+  // };
+  // logger.info(volcano);
+  // return;
 
   const offsets = Point2D.offsets(1, Offset2D.Cardinal);
-  /** first level index is timestep*/
-  // TODO: see if more of the type can be inferred
-  // FIXME: i think this is still not good enough
-  const pointTimes = new DefaultMap<number, PackedMap<Point2DLike, { checkpoints: number; elapsed: number }, number>>(() =>
-    new PackedMap<Point2DLike, { checkpoints: number; elapsed: number }, number>(Point2D.pack32, Point2D.unpack32)
-  );
   let lowestCompleted = Infinity;
 
-  // for debug
-  const checkpointHighestElapsed = new Map<number, number>();
+  for (let timestep = 1; lowestCompleted === Infinity; ++timestep) {
+    /** first level index is `checkpoints` */
+    const pointTimes = new DefaultMap<number, PackedMap<Point2DLike, number, number>>(() =>
+      new PackedMap<Point2DLike, number, number>(Point2D.pack32, Point2D.unpack32)
+    );
+    const nextTimestepAt = (timestep + 1) * TIMESTEP;
+    const destroyed = new PackedSet(Point2D.pack32, Point2D.unpack32, [...Point2D.neighbours(center, timestep, Offset2D.Circle), center]);
+    logger.debugLow({ timestep, nextTimestepAt });
 
-  function recurse(position: Point2DLike, elapsed: number, checkpoints: number, path: Point2DLike[]) {
-    const timestep = Math.floor(elapsed / TIMESTEP);
-    // debug
-    if ((checkpointHighestElapsed.get(checkpoints) ?? 0) < elapsed) {
-      const grid = new Grid(volcano);
-      const currentOobs = oobs.get(timestep);
-      grid.inspector = (cell, coord) => {
-        const onPath = path.find((pos) => Point2D.isEqual(pos, coord));
-        const destroyed = currentOobs?.has(coord);
-        const isCurrent = Point2D.isEqual(position, coord);
-        // deno-lint-ignore no-non-null-assertion
-        const isStart = Point2D.isEqual(start!, coord);
-        return onPath
-          ? `${isCurrent ? ansiStyles.fgIntense.green : isStart ? ansiStyles.fgIntense.cyan : ansiStyles.fgIntense.red}${ansiStyles.bold}${
-            destroyed ? '#' : cell
-          }${ansiStyles.reset}`
-          : destroyed
-          ? '#'
-          : String(cell);
-      };
-      logger.debugLow({ position, elapsed, checkpoints, pathLen: path.length }, grid);
-      checkpointHighestElapsed.set(checkpoints, elapsed);
-    }
-    if (elapsed >= lowestCompleted) return;
-    const pointBest = pointTimes.get(timestep).get(position);
-    if (pointBest && pointBest.checkpoints >= checkpoints && pointBest.elapsed <= elapsed) {
-      // BUG: this is still wrong. just adding timestep as a primary index is not enough. a path which took slightly longer and falls into the same timestep might take longer before part of it gets destroyed
-      if (checkpoints === ALL_QUADRANTS) logger.debugMed('abort due to pointBest', { position, elapsed, checkpoints, pointBest });
-      return;
-    }
-    pointTimes.get(timestep).set(position, { checkpoints, elapsed });
-
-    // deno thinks the `start` const which i already asserted was not undefined might now be undefined
-    // deno-lint-ignore no-non-null-assertion
-    if ((checkpoints & ALL_QUADRANTS) === ALL_QUADRANTS && Point2D.isEqual(start!, position)) {
-      logger.debugLow('completed', elapsed);
-      lowestCompleted = elapsed;
-      return;
+    /** `checkpoints` is a bitfield of `Quadrant` */
+    // deno-lint-ignore no-inner-declarations
+    function recurse(position: Point2DLike, elapsed: number, checkpoints: number) {
+      if (!start) throw new Error('shush');
+      if (elapsed >= nextTimestepAt || elapsed >= lowestCompleted || elapsed >= (pointTimes.get(checkpoints).get(position) ?? Infinity)) return;
+      pointTimes.get(checkpoints).set(position, elapsed);
+      if (checkpoints === ALL_QUADRANTS && Point2D.isEqual(start, position)) {
+        logger.debugLow('completed', { timestep, checkpoints, elapsed });
+        lowestCompleted = elapsed;
+        return;
+      }
+      for (const offset of offsets) {
+        const nextPosition = Point2D.add(position, offset);
+        if (!volcano.inBounds(nextPosition)) continue;
+        if (destroyed.has(nextPosition)) continue;
+        const nextQuadrant = getQuadrant(nextPosition);
+        if (nextQuadrant === Quadrant.West && (!(checkpoints & Quadrant.North))) continue;
+        if (nextQuadrant === Quadrant.South && (!(checkpoints & Quadrant.West))) continue;
+        if (nextQuadrant === Quadrant.East && (!(checkpoints & Quadrant.South))) continue;
+        const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
+        recurse(nextPosition, nextElapsed, checkpoints | nextQuadrant);
+      }
     }
 
-    // FIXME: these could be better sorted according to quadrant
-    for (const offset of offsets) {
-      const nextPosition = Point2D.add(position, offset);
-      // simple grid bounds check
-      if (!volcano.inBounds(nextPosition)) continue;
-      const quadrant = getQuadrant(nextPosition);
-      // FIXME: this assumes that we always start in north
-      // hopefully these constraints aren't too restrictive
-      if (quadrant === Quadrant.East && (!(checkpoints & Quadrant.North))) continue;
-      if (quadrant === Quadrant.South && (!(checkpoints & Quadrant.East))) continue;
-      if (quadrant === Quadrant.West && (!(checkpoints & Quadrant.South))) continue;
-      const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
-      const nextPath = [...path, nextPosition];
-      const nextTimestep = Math.floor(nextElapsed / TIMESTEP);
-      const nextOobs = oobs.get(nextTimestep);
-      if (timestep === nextTimestep && nextOobs?.has(position)) continue;
-      // timestep has changed - need to do full path check
-      if (timestep !== nextTimestep && nextPath.some((position) => nextOobs?.has(position))) continue;
-      recurse(nextPosition, nextElapsed, checkpoints | quadrant, nextPath);
-    }
+    if (destroyed.has(start)) break;
+    recurse(Utils.pick(start, ['x', 'y']), 0, 0);
   }
-
-  recurse(Utils.pick(start, ['x', 'y']), 0, 0, []);
 
   logger.success(lowestCompleted);
 }
