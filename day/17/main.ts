@@ -131,7 +131,7 @@ function part3(data: string, logger: Logger) {
         // prune any paths which aren't progressing fast enough
         const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
         if (
-          (nextQuadrant === Heading.North && !(checkpoints & Heading.East) && nextElapsed > northTimeout) ||
+          (nextQuadrant === Heading.North && checkpoints !== HEADING_NESW && nextElapsed > northTimeout) ||
           (nextQuadrant === Heading.East && nextElapsed > eastTimeout) ||
           (nextQuadrant === Heading.South && nextElapsed > southTimeout)
         ) { return; }
