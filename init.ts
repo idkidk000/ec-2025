@@ -31,7 +31,6 @@ else {
   logger.success('created', main);
 }
 
-const command = editor[0];
-const args = [...editor.slice(1), main, ...textFiles.map((name) => join(directory, name))];
+const [command, ...args] = [...editor.slice(1), main, ...textFiles.map((name) => join(directory, name))];
 spawn(command, args);
 logger.info(command, ...args);

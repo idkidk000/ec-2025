@@ -17,12 +17,12 @@ interface Plant {
 }
 
 function simulate(plants: Map<number, Plant>, startingIds: number[], logger: Logger): number {
-  let energies = new Counter<number>(startingIds);
-  let nextEnergies = new Counter<number>();
-  logger.debugMed('starting', energies);
-
+  let energies = new Counter<number>();
+  let nextEnergies = new Counter<number>(startingIds);
   // push forward until no further nodes to transmit to
-  while (true) {
+  while (nextEnergies.values().some((energy) => energy)) {
+    [energies, nextEnergies] = [nextEnergies, energies];
+    nextEnergies.clear();
     for (const [id, energy] of energies.entries()) {
       const plant = plants.get(id);
       if (!plant) throw new Error('oh no');
@@ -32,9 +32,6 @@ function simulate(plants: Map<number, Plant>, startingIds: number[], logger: Log
       }
     }
     logger.debugMed({ energies, nextEnergies });
-    if (!nextEnergies.values().some((energy) => energy)) break;
-    [energies, nextEnergies] = [nextEnergies, energies];
-    nextEnergies.clear();
   }
   const final = energies.entries().filter(([, energy]) => energy).toArray();
   if (final.length !== 1) {
@@ -47,7 +44,9 @@ function simulate(plants: Map<number, Plant>, startingIds: number[], logger: Log
 }
 
 function part1(plants: Map<number, Plant>, logger: Logger) {
-  const startingIds = plants.entries().filter(([, plant]) => plant.branches.some((branch) => branch.node === null)).map(([id]) => id).toArray();
+  const startingIds = plants.entries()
+    .filter(([, { branches }]) => branches.some((branch) => branch.node === null))
+    .map(([id]) => id).toArray();
   const result = simulate(plants, startingIds, logger);
   // 2337532
   logger.success(result);
@@ -61,7 +60,6 @@ function part2(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
     logger.debugLow({ test, startingIds, result });
     results.push(result);
   }
-
   const result = results.reduce((acc, item) => acc + item, 0);
   // 14053384823
   logger.success(result);
@@ -81,28 +79,28 @@ function part3(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
    * l2 has only positive
    * output has only positive
    *
-   * each l1 node has at most 512 values
-   * each l2 node has at most 262144 values
-   *
    * the connections to a given input are either all + or all -
-   * so the ideal test case is just + = on, - = off
+   * so the ideal test case is just all + = on, all - = off
    * then we don't care about l2 or out since we've already maximised l1 and all l2 and output have +weights
    */
   const idealStartingIds = plants.entries()
-    .filter(([, { branches }]) => branches.some((branch) => branch.node === null) && branches.every((branch) => branch.thickness > 0))
+    .filter(([, { branches }]) =>
+      branches.some((branch) => branch.node === null) &&
+      branches.every((branch) => branch.thickness > 0)
+    )
     .map(([id]) => id).toArray();
   const maximumResult = simulate(plants, idealStartingIds, logger);
   logger.debugLow({ idealStartingIds, length: idealStartingIds.length, maximumResult });
 
-  const testResults: number[] = [];
-  for (const test of tests) {
-    const startingIds = test.map((item, i) => ({ item, id: i + 1 })).filter(({ item }) => item).map(({ id }) => id);
-    testResults.push(simulate(plants, startingIds, logger));
-  }
-  logger.debugLow({ testResults });
+  const testResults = tests.map((test) =>
+    simulate(
+      plants,
+      test.map((item, i) => ({ item, id: i + 1 })).filter(({ item }) => item).map(({ id }) => id),
+      logger,
+    )
+  );
 
-  const result = testResults.filter((item) => item > 0).map((item) => maximumResult - item).reduce((acc, item) => acc + item, 0);
-
+  const result = testResults.filter((item) => item > 0).reduce((acc, item) => acc + item - maximumResult, 0);
   // 134790
   logger.success(result);
 }

@@ -30,6 +30,9 @@
   },
   "minimumDependencyAge": "P2D",
   "tasks": {
+    "bench": {
+      "command": "deno run -A benchmark.ts"
+    },
     "init": {
       "command": "deno run -A init.ts"
     }
