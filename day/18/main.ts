@@ -47,12 +47,7 @@ function simulate(plants: Map<number, Plant>, startingIds: number[], logger: Log
 }
 
 function part1(plants: Map<number, Plant>, logger: Logger) {
-  const startingIds: number[] = [];
-  for (const [id, plant] of plants.entries()) {
-    for (const branch of plant.branches)
-      if (branch.node === null) startingIds.push(id);
-  }
-
+  const startingIds = plants.entries().filter(([, plant]) => plant.branches.some((branch) => branch.node === null)).map(([id]) => id).toArray();
   const result = simulate(plants, startingIds, logger);
   // 2337532
   logger.success(result);
@@ -61,12 +56,7 @@ function part1(plants: Map<number, Plant>, logger: Logger) {
 function part2(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
   const results: number[] = [];
   for (const test of tests) {
-    let index = 0;
-    const startingIds: number[] = [];
-    for (const [id, plant] of plants.entries()) {
-      for (const branch of plant.branches)
-        if (branch.node === null && test[index++]) startingIds.push(id);
-    }
+    const startingIds = test.map((item, i) => ({ item, id: i + 1 })).filter(({ item }) => item).map(({ id }) => id);
     const result = simulate(plants, startingIds, logger);
     logger.debugLow({ test, startingIds, result });
     results.push(result);
@@ -83,7 +73,7 @@ function part3(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
    * - 9x  layer 1a which mix 9x inputs in order (i.e. 1 uses inputs 1-9, 2 uses inputs 10-18)
    * - 9x  layer 1b which mix 9x inputs in steps of 9 and each is incremented by 1 (i.e. 1 uses 1,10,19,28,... 2 uses 2,11,20,29,...)
    * - 9x  layer 2  which mix 1x layer 1a and 1x layer 1b
-   * - 1x  output which mixes layer 2. weights are positive
+   * - 1x  output which mixes layer 2
    *
    * each node of l1a, l1b, l2 uses unique inputs - none are reused
    *
@@ -96,66 +86,20 @@ function part3(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
    *
    * the connections to a given input are either all + or all -
    * so the ideal test case is just + = on, - = off
-   * (also all the inputs start from 1 so the searches in p2 were unnecessary)
+   * then we don't care about l2 or out since we've already maximised l1 and all l2 and output have +weights
    */
-  enum NodeType {
-    Input,
-    Level1,
-    Level2,
-    Output,
-  }
-  const nodeTypes = new Map<number, NodeType>();
-  for (const [id, plant] of plants.entries()) {
-    const nodeType: NodeType = plant.branches.every((branch) => branch.direction === Direction.In)
-      ? NodeType.Output
-      : plant.branches.some((branch) => branch.node === null)
-      ? NodeType.Input
-      : plant.branches.every((branch) => branch.thickness > 0)
-      ? NodeType.Level2
-      : NodeType.Level1;
-    nodeTypes.set(id, nodeType);
-  }
-  logger.info(nodeTypes);
-  const nodeTypeCounts = nodeTypes.values().reduce<Partial<Record<NodeType, number>>>((acc, item) => {
-    // deno-lint-ignore no-non-null-assertion
-    if (item in acc) ++acc[item]!;
-    else acc[item] = 1;
-    return acc;
-  }, {});
-  logger.info(nodeTypeCounts);
-  if (
-    nodeTypeCounts[NodeType.Input] !== 81 || nodeTypeCounts[NodeType.Level1] !== 18 || nodeTypeCounts[NodeType.Level2] !== 9 ||
-    nodeTypeCounts[NodeType.Output] !== 1
-  ) {
-    throw new Error('oh no');
-  }
-  const inputThicknessCounts = new Counter<'+' | '-' | 'oh no'>();
-  // deno-lint-ignore no-non-null-assertion
-  for (const input of nodeTypes.entries().filter(([, nodeType]) => nodeType === NodeType.Input).map(([id]) => plants.get(id)!)) {
-    const connections = input.branches.filter((branch) => branch.node !== null);
-    if (connections.every((branch) => branch.thickness > 0)) inputThicknessCounts.add('+');
-    else if (connections.every((conn) => conn.thickness < 0)) inputThicknessCounts.add('-');
-    else {
-      logger.error('oh no', connections);
-      inputThicknessCounts.add('oh no');
-    }
-  }
-  logger.info(inputThicknessCounts);
-  if (inputThicknessCounts.get('oh no') ?? 0) throw new Error('oh no');
-  const idealStartingIds: number[] = [];
-  for (const [id, plant] of plants.entries().filter(([id]) => nodeTypes.get(id) === NodeType.Input)) {
-    const connections = plant.branches.filter((branch) => branch.node !== null && branch.direction === Direction.Out);
-    if (connections.some((branch) => branch.thickness > 0) && connections.some((branch) => branch.thickness < 0)) logger.error('oh no', connections);
-    if (connections.every((branch) => branch.thickness > 0)) idealStartingIds.push(id);
-  }
+  const idealStartingIds = plants.entries()
+    .filter(([, { branches }]) => branches.some((branch) => branch.node === null) && branches.every((branch) => branch.thickness > 0))
+    .map(([id]) => id).toArray();
   const maximumResult = simulate(plants, idealStartingIds, logger);
-  logger.info(idealStartingIds, idealStartingIds.length, maximumResult);
+  logger.debugLow({ idealStartingIds, length: idealStartingIds.length, maximumResult });
 
   const testResults: number[] = [];
   for (const test of tests) {
     const startingIds = test.map((item, i) => ({ item, id: i + 1 })).filter(({ item }) => item).map(({ id }) => id);
     testResults.push(simulate(plants, startingIds, logger));
   }
+  logger.debugLow({ testResults });
 
   const result = testResults.filter((item) => item > 0).map((item) => maximumResult - item).reduce((acc, item) => acc + item, 0);
 
