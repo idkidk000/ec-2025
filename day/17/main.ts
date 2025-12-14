@@ -57,58 +57,92 @@ function part3(data: string, logger: Logger) {
   volcano.cellSet(start, 0);
   logger.debugLow({ center, start });
 
-  enum Checkpoint {
+  enum Heading {
     North = 8,
     East = 4,
     South = 2,
     West = 1,
   }
 
-  const ALL_CHECKPOINTS = Checkpoint.North | Checkpoint.East | Checkpoint.South | Checkpoint.West;
-  const TIMESTEP = 30;
+  const HEADING_NE = Heading.North | Heading.East;
+  const HEADING_NES = Heading.North | Heading.East | Heading.South;
+  const HEADING_NESW = Heading.North | Heading.East | Heading.South | Heading.West;
 
-  function getCheckpoint(point: Point2DLike): Checkpoint | 0 {
-    if (point.y > center.y && point.x === center.x) return Checkpoint.North;
-    if (point.y < center.y && point.x === center.x) return Checkpoint.South;
-    if (point.y === center.y && point.x > center.x) return Checkpoint.East;
-    if (point.y === center.y && point.x < center.x) return Checkpoint.West;
-    return 0;
-  }
+  const TIMESTEP = 30;
 
   const offsets = Point2D.offsets(1, Offset2D.Cardinal);
 
+  function getCheckpoint(point: Point2DLike): Heading | 0 {
+    if (point.x === center.x && point.y > center.y) return Heading.North;
+    if (point.y === center.y && point.x > center.x) return Heading.East;
+    if (point.x === center.x && point.y < center.y) return Heading.South;
+    if (point.y === center.y && point.x < center.x) return Heading.West;
+    return 0;
+  }
+
+  function getQuadrant(point: Point2DLike): Heading {
+    const northDist = volcano.rows - 1 - point.y;
+    const eastDist = volcano.cols - 1 - point.x;
+    const southDist = point.y;
+    const westDist = point.x;
+    if (northDist <= Math.min(eastDist, westDist)) return Heading.North;
+    if (eastDist <= Math.min(northDist, southDist)) return Heading.East;
+    if (southDist <= Math.min(eastDist, westDist)) return Heading.South;
+    if (eastDist <= Math.min(northDist, southDist)) return Heading.East;
+    if (westDist <= Math.min(northDist, southDist)) return Heading.West;
+    throw new Error('oh no');
+  }
+
   function simulate(timestep: number): number {
-    let lowestCompleted = Infinity;
+    let bestTime = Infinity;
     /** first level index is `checkpoints` */
     const pointTimes = new DefaultMap<number, PackedMap<Point2DLike, number, number>>(() =>
       new PackedMap<Point2DLike, number, number>(Point2D.pack32, Point2D.unpack32)
     );
     const nextTimestepAt = (timestep + 1) * TIMESTEP;
     const destroyed = new PackedSet(Point2D.pack32, Point2D.unpack32, [...Point2D.neighbours(center, timestep, Offset2D.Circle), center]);
+    // these are a bit unsafe since there might be a very fast path through east, for example
+    const northTimeout = nextTimestepAt * .25;
+    const eastTimeout = nextTimestepAt * .5;
+    const southTimeout = nextTimestepAt * .75;
 
     /** `checkpoints` is a bitfield of `Checkpoint`s */
-    function recurse(position: Point2DLike, elapsed: number, checkpoints: number) {
-      if (elapsed >= nextTimestepAt || elapsed >= lowestCompleted || elapsed >= (pointTimes.get(checkpoints).get(position) ?? Infinity)) return;
+    function recurse(position: Point2DLike, elapsed: number, checkpoints: number): void {
+      if (elapsed >= nextTimestepAt || elapsed >= bestTime || elapsed >= (pointTimes.get(checkpoints).get(position) ?? Infinity)) return;
       pointTimes.get(checkpoints).set(position, elapsed);
-      if (checkpoints === ALL_CHECKPOINTS && Point2D.isEqual(start, position)) {
-        logger.debugLow('completed', { timestep, checkpoints, elapsed });
-        lowestCompleted = elapsed;
+      if (checkpoints === HEADING_NESW && Point2D.isEqual(start, position)) {
+        logger.debugLow('completed', { timestep, elapsed });
+        bestTime = elapsed;
         return;
       }
+      // offsetting the index into `offsets` based on last checkpoint seems sensible but slows things down
       for (const offset of offsets) {
         const nextPosition = Point2D.add(position, offset);
         if (!volcano.inBounds(nextPosition) || destroyed.has(nextPosition)) continue;
-        const nextCheckpoint = getCheckpoint(nextPosition);
-        // force paths to be anticlockwise, the same as `offsets`
-        if (nextCheckpoint === Checkpoint.East && !(checkpoints & Checkpoint.North)) return;
-        if (nextCheckpoint === Checkpoint.South && !(checkpoints & Checkpoint.East)) return;
-        if (nextCheckpoint === Checkpoint.West && !(checkpoints & Checkpoint.South)) return;
-        recurse(nextPosition, elapsed + (volcano.cellAt(nextPosition) ?? 0), checkpoints | nextCheckpoint);
+
+        // force paths to be clockwise, the same as `offsets`
+        const nextQuadrant = getQuadrant(nextPosition);
+        if (
+          (nextQuadrant === Heading.East && !(checkpoints & Heading.North)) ||
+          (nextQuadrant === Heading.South && (checkpoints & HEADING_NE) !== HEADING_NE) ||
+          (nextQuadrant === Heading.West && (checkpoints & HEADING_NES) !== HEADING_NES)
+        ) { return; }
+
+        // prune any paths which aren't progressing fast enough
+        const nextElapsed = elapsed + (volcano.cellAt(nextPosition) ?? 0);
+        if (
+          (nextQuadrant === Heading.North && !(checkpoints & Heading.East) && nextElapsed > northTimeout) ||
+          (nextQuadrant === Heading.East && nextElapsed > eastTimeout) ||
+          (nextQuadrant === Heading.South && nextElapsed > southTimeout)
+        ) { return; }
+
+        recurse(nextPosition, nextElapsed, checkpoints | getCheckpoint(nextPosition));
       }
     }
 
-    if (!destroyed.has(start)) recurse(Utils.pick(start, ['x', 'y']), 0, 0);
-    return lowestCompleted;
+    if (destroyed.has(start)) throw new Error('start is destroyed');
+    recurse(Utils.pick(start, ['x', 'y']), 0, 0);
+    return bestTime;
   }
 
   let best = Infinity;
