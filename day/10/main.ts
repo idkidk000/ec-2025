@@ -1,7 +1,7 @@
 import { EcArgParser } from '@/lib/args.1.ts';
 import { CoordSystem, Grid } from '@/lib/grid.0.ts';
-import { HashedSet } from '@/lib/hashed-set.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
+import { PackedSet } from '@/lib/packed-set.0.ts';
 import { Point2D, Point2DLike } from '@/lib/point2d.0.ts';
 
 const dragonOffsets: Point2DLike[] = [
@@ -17,9 +17,9 @@ const dragonOffsets: Point2DLike[] = [
 
 function part1(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: Logger) {
   const moves = 4;
-  let currentPositions = new HashedSet(Point2D.hash, [dragon]);
-  let nextPositions = new HashedSet(Point2D.hash);
-  const visited = new HashedSet(Point2D.hash);
+  let currentPositions = new PackedSet(Point2D.hash, Point2D.unpack32, [dragon]);
+  let nextPositions = new PackedSet(Point2D.hash, Point2D.unpack32);
+  const visited = new PackedSet(Point2D.hash, Point2D.unpack32);
 
   for (let m = 0; m < moves; ++m) {
     for (const currentPosition of currentPositions) {
@@ -41,12 +41,12 @@ function part1(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
 
 function part2(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: Logger) {
   const moves = 20;
-  let currentDragons = new HashedSet(Point2D.hash, [dragon]);
-  let nextDragons = new HashedSet(Point2D.hash);
+  let currentDragons = new PackedSet(Point2D.pack32, Point2D.unpack32, [dragon]);
+  let nextDragons = new PackedSet(Point2D.pack32, Point2D.unpack32);
   // yes, i know
-  let currentSheeps = new HashedSet<Point2DLike, number>(Point2D.hash, grid.findAll((value) => value === 'S'));
-  const nextSheeps = new HashedSet(Point2D.hash);
-  const shelters = new HashedSet<Point2DLike, number>(Point2D.hash, grid.findAll((value) => value === '#'));
+  let currentSheeps = new PackedSet<Point2DLike, number>(Point2D.pack32, Point2D.unpack32, grid.findAll((value) => value === 'S'));
+  const nextSheeps = new PackedSet(Point2D.pack32, Point2D.unpack32);
+  const shelters = new PackedSet<Point2DLike, number>(Point2D.pack32, Point2D.unpack32, grid.findAll((value) => value === '#'));
 
   let murders = 0;
   let escapes = 0;
@@ -90,7 +90,6 @@ function part2(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
 }
 
 function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: Logger) {
-  const shelters = new HashedSet(Point2D.hash, grid.findAll((value) => value === '#').map(({ x, y }) => ({ x, y })));
   enum Player {
     Sheep,
     Dragon,
@@ -124,7 +123,7 @@ function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
         if (!grid.inBounds(next)) {
           // invalidate this branch but allow others
           played = true;
-        } else if (!Point2D.isEqual(next, dragon) || shelters.has(next)) {
+        } else if (!Point2D.isEqual(next, dragon) || grid.cellAt(next) === '#') {
           played = true;
           value += count(dragon, sheeps.toSpliced(s, 1, next), Player.Dragon);
         }
@@ -136,7 +135,7 @@ function part3(grid: Grid<string, CoordSystem.Xy>, dragon: Point2DLike, logger: 
         const next = Point2D.add(dragon, offset);
         if (!grid.inBounds(next)) continue;
         const s = sheeps.findIndex((item) => Point2D.isEqual(item, next));
-        if (s > -1 && !shelters.has(next)) value += count(next, sheeps.toSpliced(s, 1), Player.Sheep);
+        if (s > -1 && grid.cellAt(next) !== '#') value += count(next, sheeps.toSpliced(s, 1), Player.Sheep);
         else value += count(next, sheeps, Player.Sheep);
       }
       logger.debugMed('dragon', { dragon, value });

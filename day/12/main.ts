@@ -1,13 +1,13 @@
 import { EcArgParser } from '@/lib/args.1.ts';
 import { BinaryHeap } from '@/lib/binary-heap.0.ts';
 import { CoordSystem, Grid } from '@/lib/grid.0.ts';
-import { HashedSet } from '@/lib/hashed-set.0.ts';
 import { Logger } from '@/lib/logger.0.ts';
+import { PackedSet } from '@/lib/packed-set.0.ts';
 import { Offset2D, Point2D, Point2DLike } from '@/lib/point2d.0.ts';
 
 function part1(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
   logger.debugLow(grid);
-  const destroyed = new HashedSet(Point2D.hash, [{ x: 0, y: grid.rows - 1 }]);
+  const destroyed = new PackedSet(Point2D.hash, undefined, [{ x: 0, y: grid.rows - 1 }]);
 
   function fill(point: Point2DLike) {
     // deno-lint-ignore no-non-null-assertion
@@ -34,7 +34,7 @@ function part2(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
   ];
 
   const queue = new BinaryHeap((a, b) => a.depth - b.depth, start);
-  const destroyed = new HashedSet<Point2DLike>(Point2D.hash, start);
+  const destroyed = new PackedSet<Point2DLike>(Point2D.hash, undefined, start);
 
   while (queue.length) {
     // deno-lint-ignore no-non-null-assertion
@@ -56,7 +56,7 @@ function part2(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
 }
 
 function part3(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
-  function simulateOne(start: Point2DLike, initial: HashedSet<Point2DLike>) {
+  function simulateOne(start: Point2DLike, initial: PackedSet<Point2DLike>) {
     const destroyed = initial.clone();
     function fill(point: Point2DLike) {
       // deno-lint-ignore no-non-null-assertion
@@ -74,7 +74,7 @@ function part3(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
     return destroyed;
   }
 
-  let destroyed = new HashedSet<Point2DLike>(Point2D.hash);
+  let destroyed = new PackedSet<Point2DLike>(Point2D.hash);
   const bests = new Map<number, (Point2DLike & { value: number; score: number })>();
 
   for (let i = 0; i < 3; ++i) {
@@ -87,14 +87,14 @@ function part3(grid: Grid<number, CoordSystem.Xy>, logger: Logger) {
     }
     const best = bests.get(i);
     if (!best) throw new Error(`did not find best for ${i}`);
-    logger.info({ i, best });
+    logger.debugLow({ i, best });
     destroyed = simulateOne(best, destroyed);
   }
 
   const start: ({ depth: number } & Point2DLike)[] = bests.values().map((item) => ({ depth: 0, ...item })).toArray();
 
   const queue = new BinaryHeap<{ depth: number } & Point2DLike>((a, b) => a.depth - b.depth, start);
-  const finalDestroyed = new HashedSet<Point2DLike>(Point2D.hash, start);
+  const finalDestroyed = new PackedSet<Point2DLike>(Point2D.hash, undefined, start);
 
   while (queue.length) {
     // deno-lint-ignore no-non-null-assertion

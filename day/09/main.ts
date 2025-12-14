@@ -7,23 +7,25 @@ interface Sequence {
 }
 
 function getSimilarity(child: Sequence, parents: [a: Sequence, b: Sequence], logger: Logger): number {
-  const parentData = parents.map((parent) => ({ ...parent, similarity: 0 }));
+  const similarites: [a: number, b: number] = [0, 0];
   let valid = true;
   for (let d = 0; valid && d < child.data.length; ++d) {
     valid = false;
-    for (const parent of parentData) {
-      if (parent.data[d] === child.data[d]) {
-        ++parent.similarity;
-        valid = true;
-      }
+    if (parents[0].data[d] === child.data[d]) {
+      ++similarites[0];
+      valid = true;
     }
-    if (!valid) {
-      logger.debugMed('invalid', { child, parentData });
-      return 0;
+    if (parents[1].data[d] === child.data[d]) {
+      ++similarites[1];
+      valid = true;
     }
   }
-  const similarity = parentData.reduce((acc, item) => acc * item.similarity, 1);
-  logger.debugMed('found', { child, parentData, similarity });
+  if (!valid) {
+    logger.debugMed('invalid', { child, parents, similarites });
+    return 0;
+  }
+  const similarity = similarites[0] * similarites[1];
+  logger.debugMed('found', { child, parents, similarites, similarity });
   return similarity;
 }
 
@@ -88,7 +90,7 @@ function part3(sequences: Sequence[], logger: Logger) {
       const family = families[f];
       for (let o = f + 1; !found && o < families.length; ++o) {
         const other = families[o];
-        if (family.intersection(other).size) {
+        if (!family.isDisjointFrom(other)) {
           families[f] = family.union(other);
           families.splice(o, 1);
           found = true;
