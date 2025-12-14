@@ -1,7 +1,6 @@
 import { EcArgParser } from '@/lib/args.1.ts';
+import { Counter } from '@/lib/counter.1.ts';
 import { Logger } from '@/lib/logger.0.ts';
-import { Counter } from '../../lib/counter.1.ts';
-import { Dir } from 'node:fs';
 
 enum Direction {
   In,
@@ -94,6 +93,10 @@ function part3(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
    *
    * each l1 node has at most 512 values
    * each l2 node has at most 262144 values
+   *
+   * the connections to a given input are either all + or all -
+   * so the ideal test case is just + = on, - = off
+   * (also all the inputs start from 1 so the searches in p2 were unnecessary)
    */
   enum NodeType {
     Input,
@@ -113,15 +116,51 @@ function part3(plants: Map<number, Plant>, tests: boolean[][], logger: Logger) {
     nodeTypes.set(id, nodeType);
   }
   logger.info(nodeTypes);
-  const counts = nodeTypes.values().reduce<Partial<Record<NodeType, number>>>((acc, item) => {
+  const nodeTypeCounts = nodeTypes.values().reduce<Partial<Record<NodeType, number>>>((acc, item) => {
     // deno-lint-ignore no-non-null-assertion
     if (item in acc) ++acc[item]!;
     else acc[item] = 1;
     return acc;
   }, {});
-  logger.info(counts);
-  if (counts[NodeType.Input] !== 81 || counts[NodeType.Level1] !== 18 || counts[NodeType.Level2] !== 9 || counts[NodeType.Output] !== 1)
+  logger.info(nodeTypeCounts);
+  if (
+    nodeTypeCounts[NodeType.Input] !== 81 || nodeTypeCounts[NodeType.Level1] !== 18 || nodeTypeCounts[NodeType.Level2] !== 9 ||
+    nodeTypeCounts[NodeType.Output] !== 1
+  ) {
     throw new Error('oh no');
+  }
+  const inputThicknessCounts = new Counter<'+' | '-' | 'oh no'>();
+  // deno-lint-ignore no-non-null-assertion
+  for (const input of nodeTypes.entries().filter(([, nodeType]) => nodeType === NodeType.Input).map(([id]) => plants.get(id)!)) {
+    const connections = input.branches.filter((branch) => branch.node !== null);
+    if (connections.every((branch) => branch.thickness > 0)) inputThicknessCounts.add('+');
+    else if (connections.every((conn) => conn.thickness < 0)) inputThicknessCounts.add('-');
+    else {
+      logger.error('oh no', connections);
+      inputThicknessCounts.add('oh no');
+    }
+  }
+  logger.info(inputThicknessCounts);
+  if (inputThicknessCounts.get('oh no') ?? 0) throw new Error('oh no');
+  const idealStartingIds: number[] = [];
+  for (const [id, plant] of plants.entries().filter(([id]) => nodeTypes.get(id) === NodeType.Input)) {
+    const connections = plant.branches.filter((branch) => branch.node !== null && branch.direction === Direction.Out);
+    if (connections.some((branch) => branch.thickness > 0) && connections.some((branch) => branch.thickness < 0)) logger.error('oh no', connections);
+    if (connections.every((branch) => branch.thickness > 0)) idealStartingIds.push(id);
+  }
+  const maximumResult = simulate(plants, idealStartingIds, logger);
+  logger.info(idealStartingIds, idealStartingIds.length, maximumResult);
+
+  const testResults: number[] = [];
+  for (const test of tests) {
+    const startingIds = test.map((item, i) => ({ item, id: i + 1 })).filter(({ item }) => item).map(({ id }) => id);
+    testResults.push(simulate(plants, startingIds, logger));
+  }
+
+  const result = testResults.filter((item) => item > 0).map((item) => maximumResult - item).reduce((acc, item) => acc + item, 0);
+
+  // 134790
+  logger.success(result);
 }
 
 function main() {
@@ -146,8 +185,10 @@ function main() {
   }
   // add reverse connections
   for (const [id, plant] of plants.entries()) {
-    for (const branch of plant.branches)
-      if (branch.node !== null) plants.get(branch.node)?.branches.push({ node: id, thickness: branch.thickness, direction: Direction.Out });
+    for (const branch of plant.branches) {
+      if (branch.node !== null && branch.direction === Direction.In)
+        plants.get(branch.node)?.branches.push({ node: id, thickness: branch.thickness, direction: Direction.Out });
+    }
   }
   const tests = data
     .matchAll(/^(?<case>[10 ]+)$/gm)
