@@ -88,7 +88,6 @@ function part3(data: string, logger: Logger) {
     if (northDist <= Math.min(eastDist, westDist)) return Heading.North;
     if (eastDist <= Math.min(northDist, southDist)) return Heading.East;
     if (southDist <= Math.min(eastDist, westDist)) return Heading.South;
-    if (eastDist <= Math.min(northDist, southDist)) return Heading.East;
     if (westDist <= Math.min(northDist, southDist)) return Heading.West;
     throw new Error('oh no');
   }

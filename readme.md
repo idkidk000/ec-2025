@@ -38,7 +38,7 @@ Log levels are documented in `lib/logger.[version].ts`
 | [09 - Encoded in the Scales](day/09/main.ts)       | 0.045s | 0.096s | 2.696s  |
 | [10 - Bloodmouth on the Board](day/10/main.ts)     | 0.050s | 0.130s | 1.480s  |
 | [11 - The Scout Duck Protocol](day/11/main.ts)     | 0.046s | 0.967s | 0.048s  |
-| [12 - One Spark to Burn Them All](day/12/main.ts)  | 0.053s | 0.087s | 16.425s |
+| [12 - One Spark to Burn Them All](day/12/main.ts)  | 0.053s | 0.073s | 13.436s |
 | [13 - Unlocking the Mountain](day/13/main.ts)      | 0.048s | 0.057s | 0.050s  |
 | [14 - The Game of Light](day/14/main.ts)           | 0.068s | 1.487s | 0.096s  |
 | [15 - Definitely Not a Maze](day/15/main.ts)       | 0.061s | 0.482s | 3.857s  |
