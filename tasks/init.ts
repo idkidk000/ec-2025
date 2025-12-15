@@ -12,7 +12,7 @@ const exists = async (path: string) => {
   }
 };
 
-const template = '.template.ts';
+const template = 'meta/template.ts';
 const editor = ['flatpak', 'run', 'com.vscodium.codium'];
 
 const logger = new Logger(import.meta.url);
@@ -31,6 +31,6 @@ else {
   logger.success('created', main);
 }
 
-const [command, ...args] = [...editor.slice(1), main, ...textFiles.map((name) => join(directory, name))];
+const [command, ...args] = [...editor, main, ...textFiles.map((name) => join(directory, name))];
 spawn(command, args);
 logger.info(command, ...args);
