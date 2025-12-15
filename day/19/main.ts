@@ -70,48 +70,57 @@ function part2(holes: Hole[], logger: Logger) {
 }
 
 function part3(holes: Hole[], logger: Logger) {
-  const slices: { x: number; holes: { minY: number; maxY: number }[] }[] = [
-    // { x: 0, holes: [{ minY: 0, maxY: 0 }] }
-  ];
-  const xs = new Set(holes.map(({ x }) => x));
-  for (const x of xs) {
+  const walls = new Set(holes.map(({ x }) => x)).keys().map((x) => {
     const xHoles = holes.filter((hole) => hole.x === x);
-    slices.push({ x, holes: xHoles.map(({ minY, maxY }) => ({ minY, maxY })) });
-  }
-  logger.debugLow(slices);
-  // // TODO: loop through slices, prune inaccessible areas of holes in next
-  // for (let i = 0; i < slices.length - 1; ++i) {
-  //   const current = slices[i];
-  //   const next = slices[i + 1];
-  // }
+    return { x, holes: xHoles.map(({ minY, maxY }) => ({ minY, maxY })) };
+  }).toArray();
+
+  logger.debugLow(walls);
 
   const queue = new BinaryHeap<QueueItem>((a, b) => b.x - a.x || a.flaps - b.flaps, [{ x: 0, y: 0, flaps: 0 }]);
-  let best = Infinity;
   const seen = new PackedSet(Point2D.hash);
-  while (best === Infinity && queue.length) {
+
+  const endX = walls[walls.length - 1].x;
+  let best = Infinity;
+
+  while (queue.length) {
     const item = queue.pop();
     if (!item) throw new Error('oh no');
+    if (item.x === endX) {
+      best = item.flaps;
+      logger.debugLow('finished', item);
+      break;
+    }
+    // we'll get duplicates from paths through different holes
     if (seen.has(item)) continue;
     seen.add(item);
-    const nextSlices = slices.filter(({ x }) => x > item.x);
-    if (nextSlices.length === 0) {
-      logger.debugLow('finished', item);
-      best = item.flaps;
-    }
-    // TODO: we could probably skip ahead to the next slice
-    const nextItems: QueueItem[] = [
-      { x: item.x + 1, y: item.y + 1, flaps: item.flaps + 1 },
-      { x: item.x + 1, y: item.y - 1, flaps: item.flaps },
-    ];
-    for (const nextItem of nextItems) {
-      if (
-        nextSlices.every((slice) => {
-          const xDist = slice.x - nextItem.x;
-          return slice.holes.some((hole) => nextItem.y + xDist >= hole.minY && nextItem.y - xDist <= hole.maxY);
-        })
-      ) { queue.push(nextItem); }
+    const nextWalls = walls.filter(({ x }) => x > item.x);
+    const [nextWall] = nextWalls;
+    const xDist = nextWall.x - item.x;
+    const nextMinY = item.y - xDist;
+    const nextMaxY = item.y + xDist;
+    for (const hole of nextWall.holes) {
+      const minY = Math.max(nextMinY, hole.minY);
+      const maxY = Math.min(nextMaxY, hole.maxY);
+      const minFlaps = Math.ceil((xDist + minY - item.y) / 2);
+      const maxFlaps = Math.floor((xDist + maxY - item.y) / 2);
+      for (let flaps = minFlaps; flaps <= maxFlaps; ++flaps) {
+        const nextItem = {
+          x: item.x + xDist,
+          y: item.y - xDist + flaps * 2,
+          flaps: item.flaps + flaps,
+        };
+        // logger.debugMed({ nextItem });
+        if (
+          nextWalls.every((wall) => {
+            const xDist = wall.x - nextItem.x;
+            return wall.holes.some((hole) => nextItem.y + xDist >= hole.minY && nextItem.y - xDist <= hole.maxY);
+          })
+        ) { queue.push(nextItem); }
+      }
     }
   }
+
   // 4362553
   logger.success(best);
 }

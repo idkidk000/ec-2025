@@ -15,7 +15,7 @@ function part1(data: string, logger: Logger) {
   const total = Point2D.neighbours(center, 10, Offset2D.Circle)
     .reduce((acc, item) => acc + (volcano.cellAt(item) ?? 0), 0);
   // 1645
-  logger.info(total);
+  logger.success(total);
 }
 
 function part2(data: string, logger: Logger) {

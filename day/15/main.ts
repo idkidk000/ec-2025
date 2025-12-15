@@ -61,7 +61,7 @@ function part1(data: string, logger: Logger) {
       const next = Point2D.add(item, offset);
       if (Point2D.isEqual(next, end)) {
         if (item.cost + 1 < best) best = item.cost + 1;
-        logger.info('end', { item, next, best });
+        logger.debugLow('end', { item, next, best });
       } else if (walls.has(next) || seen.has(next)) continue;
       else {
         seen.add(next);
@@ -128,13 +128,13 @@ function part3(data: string, logger: Logger) {
     const item = queue.pop();
     if (!item || seen.has(item)) continue;
     if (Point2D.isEqual(end, item)) {
-      logger.info('found', item);
+      logger.debugLow('found', item);
       cost = item.cost;
       break;
     }
     // if (item.moves > 3) continue;
     seen.add(item);
-    logger.debugLow(item, queue.length);
+    logger.debugMed(item, queue.length);
     let northLimit = Infinity;
     let eastLimit = Infinity;
     let southLimit = -Infinity;
@@ -168,7 +168,7 @@ function part3(data: string, logger: Logger) {
         }
       }
     }
-    logger.debugLow({ northLimit, eastLimit, southLimit, westLimit });
+    logger.debugMed({ northLimit, eastLimit, southLimit, westLimit });
 
     for (const x of Xs.filter((x) => x > westLimit && x < eastLimit)) {
       const nextItem = {
@@ -176,7 +176,7 @@ function part3(data: string, logger: Logger) {
         x,
         y: item.y,
       };
-      logger.debugLow('push', nextItem);
+      logger.debugMed('push', nextItem);
       queue.push(nextItem);
     }
     for (const y of Ys.filter((y) => y > southLimit && y < northLimit)) {
@@ -185,7 +185,7 @@ function part3(data: string, logger: Logger) {
         x: item.x,
         y,
       };
-      logger.debugLow('push', nextItem);
+      logger.debugMed('push', nextItem);
       queue.push(nextItem);
     }
   }
