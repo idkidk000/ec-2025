@@ -1,0 +1,9 @@
+abcdefg
+.hijkl.
+..mno..
+...p...
+
+pnmihba
+.okjdc.
+..lfe..
+...g...
