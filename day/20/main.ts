@@ -97,15 +97,19 @@ function part3(data: string, logger: Logger) {
   logger.info(grid);
   let best = Infinity;
 
+  /*
+    x: grids[0].cols - 1 - one.y * 2 + one.x % 2,
+    y: grids[0].rows - 1 - one.y + Math.ceil(one.x / 2),
+  */
   function rotate(point: Point2DLike, value: number): Point2DLike {
     let current = { ...point };
-    let next = { ...point };
+    let next: Point2DLike;
     for (let i = 0; i < value; ++i) {
       next = {
         x: grid.cols - 1 - current.y * 2 + current.x % 2,
         y: grid.rows - 1 - current.y + Math.ceil(current.x / 2),
       };
-      current = next;
+      current = { ...next };
     }
     logger.debugHigh('rotate', point, value, current, grid.inBounds(current) ? grid.cellAt(current) : 'oob');
     return current;
@@ -115,34 +119,36 @@ function part3(data: string, logger: Logger) {
     const item = queue.popFront();
     if (!item) throw new Error('oh no');
     logger.debugMed('pop', item, { xm2: item.x % 2, ym2: item.y % 2 });
-    if (item.jumps === 0 && !Point2D.isEqual(item, { x: 0, y: 0 })) throw new Error('ugh');
-    if (item.jumps === 1 && !Point2D.isEqual(item, { x: 1, y: 1 })) throw new Error('ugh');
-    if (item.jumps === 2 && !Point2D.isEqual(item, { x: 2, y: 1 })) throw new Error('ugh');
-    if (item.jumps === 3 && !Point2D.isEqual(item, { x: 3, y: 2 })) throw new Error('ugh');
+    // if (item.jumps === 0 && !Point2D.isEqual(item, { x: 0, y: 0 })) throw new Error('ugh');
+    // if (item.jumps === 1 && !Point2D.isEqual(item, { x: 1, y: 1 })) throw new Error('ugh');
+    // if (item.jumps === 2 && !Point2D.isEqual(item, { x: 2, y: 1 })) throw new Error('ugh');
+    // if (item.jumps === 3 && !Point2D.isEqual(item, { x: 3, y: 2 })) throw new Error('ugh');
     for (
       const offset of [
         { x: -1, y: 0 },
         { x: 0, y: 0 },
         { x: 1, y: 0 },
-        // FIXME: almost certainly got the y condition wrong
-        item.y % 2 === item.x % 2 ? { x: 1, y: 1 } : { x: -1, y: -1 },
+        item.x % 2 === 0 ? { x: 1, y: 1 } : { x: -1, y: -1 },
       ] satisfies Point2DLike[]
     ) {
       const nextItem = { ...Point2D.add(item, offset), jumps: item.jumps + 1 };
       if (!grid.inBounds(nextItem)) continue;
-      const value = grid.cellAt(rotate(nextItem, nextItem.jumps % 3));
+      const translated = rotate(nextItem, nextItem.jumps % 3);
+      if (!grid.inBounds(translated)) continue;
+      const value = grid.cellAt(translated);
+      if (value === '#' || value === '.') continue;
       if (value === 'E') {
         logger.debugLow('finished', nextItem);
         best = nextItem.jumps;
         break;
       }
-      if (value !== 'T') continue;
       if (seen.get(nextItem.jumps % 3).has(nextItem)) continue;
       seen.get(nextItem.jumps % 3).add(nextItem);
       queue.pushBack(nextItem);
     }
   }
 
+  // 488
   logger.success(best);
 }
 
