@@ -46,3 +46,4 @@ Log levels are documented in `lib/logger.[version].ts`
 | [17 - Deadline-Driven Development](day/17/main.ts) | 0.055s | 0.117s | 24.949s |
 | [18 - When Roots Remember](day/18/main.ts)         | 0.045s | 0.055s | 0.056s  |
 | [19 - Flappy Quack](day/19/main.ts)                | 0.061s | 0.076s | 0.058s  |
+| [20 - Dream in Triangles](day/20/main.ts)          | 0.055s | 0.077s | 0.084s  |
