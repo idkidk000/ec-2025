@@ -27,7 +27,7 @@ Log levels are documented in `lib/logger.[version].ts`
 
 | Day                                                | Part 1 | Part 2 | Part 3  |
 | -------------------------------------------------- | ------ | ------ | ------- |
-| [01 - Whispers in the Shell](day/01/main.ts)       | 0.054s | 0.046s | 0.048s  |
+| [01 - Whispers in the Shell](day/01/main.ts)       | 0.049s | 0.049s | 0.047s  |
 | [02 - From Complex to Clarity](day/02/main.ts)     | 0.051s | 0.129s | 2.702s  |
 | [03 - The Deepest Fit](day/03/main.ts)             | 0.046s | 0.054s | 0.133s  |
 | [04 - Teeth of the Wind](day/04/main.ts)           | 0.049s | 0.048s | 0.056s  |
@@ -45,4 +45,4 @@ Log levels are documented in `lib/logger.[version].ts`
 | [16 - Harmonics of Stone](day/16/main.ts)          | 0.046s | 0.051s | 0.059s  |
 | [17 - Deadline-Driven Development](day/17/main.ts) | 0.055s | 0.117s | 24.949s |
 | [18 - When Roots Remember](day/18/main.ts)         | 0.045s | 0.055s | 0.056s  |
-| [19 - Flappy Quack](day/19/main.ts)                | 0.070s | 0.087s | 0.107s  |
+| [19 - Flappy Quack](day/19/main.ts)                | 0.061s | 0.076s | 0.058s  |
